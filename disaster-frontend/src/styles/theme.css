@@ -1,0 +1,57 @@
+/* ── Design System — Disaster Dashboard Dark Theme ──────────── */
+:root {
+  /* Background layers */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a1f2e;
+  --bg-card-hover: #222840;
+  --bg-sidebar: #0d1117;
+  --bg-topbar: rgba(17, 24, 39, 0.85);
+  --bg-input: #1e2433;
+
+  /* Text */
+  --text-main: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Accent */
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-glow: rgba(59, 130, 246, 0.25);
+
+  /* Status */
+  --status-red: #ef4444;
+  --status-red-bg: rgba(239, 68, 68, 0.12);
+  --status-yellow: #f59e0b;
+  --status-yellow-bg: rgba(245, 158, 11, 0.12);
+  --status-green: #10b981;
+  --status-green-bg: rgba(16, 185, 129, 0.12);
+  --status-blue: #3b82f6;
+  --status-blue-bg: rgba(59, 130, 246, 0.12);
+
+  /* Border */
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-color-hover: rgba(255, 255, 255, 0.12);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.15);
+
+  /* Transition */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+
+  /* Sidebar */
+  --sidebar-width: 260px;
+  --sidebar-collapsed: 72px;
+  --topbar-height: 60px;
+}
