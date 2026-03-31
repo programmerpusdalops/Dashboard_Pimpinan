@@ -18,6 +18,7 @@ const refugeeRoutes = require('../modules/refugees/refugee.routes');
 const healthRoutes = require('../modules/refugees/health.routes');
 const taskRoutes = require('../modules/operations/task.routes');
 const decisionRoutes = require('../modules/decisions/decision.routes');
+const instructionRoutes = require('../modules/instructions/instruction.routes');
 const fundingRoutes = require('../modules/funding/funding.routes');
 const dashboardRoutes = require('../modules/dashboard/dashboard.routes');
 
@@ -85,6 +86,7 @@ app.use(`${API}/shelters`, healthRoutes);   // healthRoutes handles /:shelterId/
 // Operations & Decisions
 app.use(`${API}/tasks`, taskRoutes);
 app.use(`${API}/decisions`, decisionRoutes);
+app.use(`${API}/instructions`, instructionRoutes);
 
 // Funding & Dashboard
 app.use(`${API}/funding`, fundingRoutes);

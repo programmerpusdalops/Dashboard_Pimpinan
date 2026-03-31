@@ -28,6 +28,9 @@ export const logisticsService = {
     updateInventoryItem: (itemId, payload) =>
         api.put(`/warehouses/inventory/${itemId}`, payload).then(r => r.data.data),
 
+    deleteInventoryItem: (itemId) =>
+        api.delete(`/warehouses/inventory/${itemId}`).then(r => r.data.data),
+
     // ── Shipments ───────────────────────────────────────────────────
     getShipments: (params = {}) =>
         api.get('/shipments', { params }).then(r => r.data.data),

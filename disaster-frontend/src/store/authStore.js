@@ -44,7 +44,7 @@ const useAuthStore = create((set, get) => ({
 
     // Helper: cek apakah user punya role tertentu atau lebih tinggi
     hasRole: (minRole) => {
-        const hierarchy = { viewer: 1, operator: 2, admin: 3, superadmin: 4 };
+        const hierarchy = { viewer: 1, operator: 2, admin: 3, superadmin: 4, pimpinan: 5 };
         const userLevel = hierarchy[get().user?.role] || 0;
         const required = hierarchy[minRole] || 99;
         return userLevel >= required;

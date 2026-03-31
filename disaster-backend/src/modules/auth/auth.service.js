@@ -11,13 +11,19 @@ const generateTokens = (user) => {
         name: user.name,
         opd: user.opd,
     };
+
+    // Pimpinan mendapat sesi lebih panjang (layar dashboard selalu menyala)
+    const isPimpinan = user.role === 'pimpinan';
+    const accessExpiry = isPimpinan ? '2h' : (process.env.JWT_EXPIRES_IN || '15m');
+    const refreshExpiry = isPimpinan ? '90d' : (process.env.JWT_REFRESH_EXPIRES_IN || '7d');
+
     const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+        expiresIn: accessExpiry,
     });
     const refreshToken = jwt.sign(
         { id: user.id },
         process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
+        { expiresIn: refreshExpiry }
     );
     return { accessToken, refreshToken };
 };

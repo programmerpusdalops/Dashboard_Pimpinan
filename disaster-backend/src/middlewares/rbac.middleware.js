@@ -6,6 +6,7 @@ const ROLE_HIERARCHY = {
     operator: 2,
     admin: 3,
     superadmin: 4,
+    pimpinan: 5,
 };
 
 // Minimal role yang dibutuhkan
@@ -22,8 +23,9 @@ const authorize = (...roles) => {
 };
 
 // Alias helpers
-const isAdmin = authorize('admin', 'superadmin');
-const isSuperAdmin = authorize('superadmin');
-const isOperator = authorize('operator', 'admin', 'superadmin');
+const isPimpinan = authorize('pimpinan');
+const isAdmin = authorize('admin', 'superadmin', 'pimpinan');
+const isSuperAdmin = authorize('superadmin', 'pimpinan');
+const isOperator = authorize('operator', 'admin', 'superadmin', 'pimpinan');
 
-module.exports = { authorize, isAdmin, isSuperAdmin, isOperator };
+module.exports = { authorize, isPimpinan, isAdmin, isSuperAdmin, isOperator };

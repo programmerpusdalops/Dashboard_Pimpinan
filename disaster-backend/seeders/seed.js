@@ -10,217 +10,199 @@ async function seed() {
     try {
         await sequelize.authenticate();
         await sequelize.sync({ force: false });
-        console.log('🌱 Seeding database...');
+        console.log('🌱 Seeding database with richer data...');
 
-        // ── Users ────────────────────────────────────────────────
+        // ── 1. Users ────────────────────────────────────────────────
         const hash = await bcrypt.hash('admin123', 12);
         const [superadmin] = await User.findOrCreate({
-            where: { email: 'superadmin@bpbd.go.id' }, defaults: {
+            where: { email: 'superadmin@bpbd.sulteng.go.id' }, defaults: {
                 name: 'Super Administrator', password_hash: hash, role: 'superadmin', opd: 'BPBD Provinsi',
             }
         });
         const [admin] = await User.findOrCreate({
-            where: { email: 'admin@bpbd.go.id' }, defaults: {
+            where: { email: 'admin@bpbd.sulteng.go.id' }, defaults: {
                 name: 'Admin BPBD', password_hash: hash, role: 'admin', opd: 'BPBD Provinsi',
             }
         });
         const [operator] = await User.findOrCreate({
-            where: { email: 'operator@bpbd.go.id' }, defaults: {
-                name: 'Operator Lapangan', password_hash: hash, role: 'operator', opd: 'BPBD Provinsi',
+            where: { email: 'operator@bpbd.sulteng.go.id' }, defaults: {
+                name: 'Petugas Pusdalops', password_hash: hash, role: 'operator', opd: 'BPBD Provinsi',
             }
         });
-        console.log('✅ Users seeded');
 
-        // ── Disaster Events ──────────────────────────────────────
+        // Pimpinan users
+        const hashPimpinan = await bcrypt.hash('pimpinan123', 12);
+        const [kalaksa] = await User.findOrCreate({
+            where: { email: 'kalaksa@bpbd.sulteng.go.id' }, defaults: {
+                name: 'Kalaksa BPBD', password_hash: hashPimpinan, role: 'pimpinan', opd: 'BPBD Provinsi',
+            }
+        });
+        const [gubernur] = await User.findOrCreate({
+            where: { email: 'gubernur@bpbd.sulteng.go.id' }, defaults: {
+                name: 'Gubernur Sulawesi Tengah', password_hash: hashPimpinan, role: 'pimpinan', opd: 'Pemprov Sulteng',
+            }
+        });
+
+        // ── 2. Disaster Events (Sulawesi Tengah) ────────────────────
+        // Event 1: Banjir Bandang (Kritis)
         const [event1] = await DisasterEvent.findOrCreate({
-            where: { title: 'Banjir Bandang Kec. Suka Makmur' }, defaults: {
+            where: { title: 'Banjir Bandang Sigi' }, defaults: {
                 type: 'banjir', status: 'tanggap_darurat', severity: 'kritis',
-                location_name: 'Kecamatan Suka Makmur, Kab. A',
-                latitude: -6.2, longitude: 106.8,
-                start_date: new Date(), description: 'Banjir bandang akibat luapan Sungai Ciliwung.',
+                location_name: 'Kec. Dolo Selatan, Kab. Sigi', latitude: -1.09, longitude: 119.92,
+                start_date: new Date(Date.now() - 2 * 86400000), description: 'Banjir bandang akibat curah hujan tinggi, memutus jembatan.',
                 created_by: admin.id,
             }
         });
+        
+        // Event 2: Tanah Longsor (Berat)
         const [event2] = await DisasterEvent.findOrCreate({
-            where: { title: 'Tanah Longsor KM 42' }, defaults: {
+            where: { title: 'Longsor Jalur Kebun Kopi' }, defaults: {
                 type: 'longsor', status: 'tanggap_darurat', severity: 'berat',
-                location_name: 'Jalur Lintas Selatan, KM 42',
-                latitude: -6.9, longitude: 107.6,
-                start_date: new Date(), description: 'Longsor memutus akses jalan lintas selatan.',
+                location_name: 'Jalur Trans Sulawesi, Pegunungan Kebun Kopi', latitude: -0.74, longitude: 120.02,
+                start_date: new Date(Date.now() - 1 * 86400000), description: 'Material longsor menutupi jalur sepanjang 50m.',
                 created_by: admin.id,
             }
         });
-        console.log('✅ Disaster events seeded');
-
-        // ── Casualties ───────────────────────────────────────────
-        await Casualty.findOrCreate({
-            where: { event_id: event1.id, recorded_at: new Date() }, defaults: {
-                meninggal: 8, luka_berat: 24, luka_ringan: 60, hilang: 3,
-                rumah_rusak_berat: 120, rumah_rusak_sedang: 200, rumah_rusak_ringan: 130,
-                fasilitas_publik_rusak: 15, akses_jalan_putus: 6, updated_by: operator.id,
+        
+        // Event 3: Gempa Bumi (Kritis)
+        const [event3] = await DisasterEvent.findOrCreate({
+            where: { title: 'Gempa M 6.2 Poso' }, defaults: {
+                type: 'gempa', status: 'tanggap_darurat', severity: 'kritis',
+                location_name: 'Poso Pesisir Utara', latitude: -1.35, longitude: 120.73,
+                start_date: new Date(Date.now() - 3 * 86400000), description: 'Gempa dangkal mengakibatkan kerusakan bangunan fasum.',
+                created_by: admin.id,
             }
         });
+
+        // Event 4: Karhutla (Sedang)
+        const [event4] = await DisasterEvent.findOrCreate({
+            where: { title: 'Kebakaran Hutan Morowali' }, defaults: {
+                type: 'karhutla', status: 'siaga', severity: 'sedang',
+                location_name: 'Bungku Tengah, Kab. Morowali', latitude: -2.31, longitude: 121.72,
+                start_date: new Date(), description: 'Titik api terdeteksi di area lahan gambut dekat permukiman.',
+                created_by: admin.id,
+            }
+        });
+
+        // ── 3. Casualties ───────────────────────────────────────────
+        // Korban Banjir Sigi
         await Casualty.findOrCreate({
-            where: { event_id: event2.id, recorded_at: new Date() }, defaults: {
-                meninggal: 4, luka_berat: 10, luka_ringan: 24, hilang: 2,
+            where: { event_id: event1.id }, defaults: {
+                meninggal: 2, luka_berat: 14, luka_ringan: 45, hilang: 1, recorded_at: new Date(),
+                rumah_rusak_berat: 45, rumah_rusak_sedang: 120, rumah_rusak_ringan: 80,
+                fasilitas_publik_rusak: 4, akses_jalan_putus: 2, updated_by: operator.id,
+            }
+        });
+        // Korban Gempa Poso
+        await Casualty.findOrCreate({
+            where: { event_id: event3.id }, defaults: {
+                meninggal: 5, luka_berat: 32, luka_ringan: 110, hilang: 0, recorded_at: new Date(),
+                rumah_rusak_berat: 154, rumah_rusak_sedang: 310, rumah_rusak_ringan: 420,
+                fasilitas_publik_rusak: 12, akses_jalan_putus: 1, updated_by: operator.id,
+            }
+        });
+        // Korban Longsor
+        await Casualty.findOrCreate({
+            where: { event_id: event2.id }, defaults: {
+                meninggal: 0, luka_berat: 3, luka_ringan: 5, hilang: 0, recorded_at: new Date(),
                 rumah_rusak_berat: 0, rumah_rusak_sedang: 0, rumah_rusak_ringan: 0,
-                fasilitas_publik_rusak: 0, akses_jalan_putus: 2, updated_by: operator.id,
+                fasilitas_publik_rusak: 0, akses_jalan_putus: 3, updated_by: operator.id,
             }
         });
-        console.log('✅ Casualties seeded');
 
-        // ── Shelters & Refugees ────────────────────────────────────
+        // ── 4. Shelters & Refugees (Banjir & Gempa) ────────────────────
         const [shelter1] = await Shelter.findOrCreate({
-            where: { name: 'Posko GOR Bintang Gemilang' }, defaults: {
-                event_id: event1.id, location_name: 'GOR Bintang Gemilang, Kec. Suka Makmur',
-                latitude: -6.21, longitude: 106.81, capacity: 1500, current_occupancy: 1250,
-                status: 'aktif', pic_name: 'Kepala Dinas Sosial',
+            where: { name: 'Posko Utama Dolo' }, defaults: {
+                event_id: event1.id, location_name: 'Halaman Kantor Camat Dolo',
+                latitude: -1.08, longitude: 119.92, capacity: 500, current_occupancy: 480,
+                status: 'aktif', pic_name: 'Camat Dolo',
             }
         });
         const [shelter2] = await Shelter.findOrCreate({
-            where: { name: 'Posko Desa Maju Sejahtera' }, defaults: {
-                event_id: event1.id, location_name: 'Balai Desa Maju Sejahtera',
-                latitude: -6.25, longitude: 106.85, capacity: 1000, current_occupancy: 850,
-                status: 'aktif', pic_name: 'Kepala Desa',
+            where: { name: 'Posko Alun-alun Poso' }, defaults: {
+                event_id: event3.id, location_name: 'Alun-alun Sintuwu Maroso',
+                latitude: -1.39, longitude: 120.75, capacity: 2000, current_occupancy: 1540,
+                status: 'aktif', pic_name: 'BPBD Poso',
+            }
+        });
+        
+        await Refugee.findOrCreate({
+            where: { shelter_id: shelter1.id }, defaults: {
+                total_jiwa: 480, balita: 65, anak: 120, dewasa: 250, lansia: 45,
+                ibu_hamil: 8, disabilitas: 4, recorded_date: new Date(), updated_by: operator.id,
             }
         });
         await Refugee.findOrCreate({
-            where: { shelter_id: shelter1.id, recorded_date: new Date().toISOString().split('T')[0] }, defaults: {
-                total_jiwa: 1250, balita: 188, anak: 313, dewasa: 625, lansia: 125,
-                ibu_hamil: 22, disabilitas: 15, updated_by: operator.id,
+            where: { shelter_id: shelter2.id }, defaults: {
+                total_jiwa: 1540, balita: 210, anak: 400, dewasa: 750, lansia: 180,
+                ibu_hamil: 25, disabilitas: 18, recorded_date: new Date(), updated_by: operator.id,
             }
         });
-        await Refugee.findOrCreate({
-            where: { shelter_id: shelter2.id, recorded_date: new Date().toISOString().split('T')[0] }, defaults: {
-                total_jiwa: 850, balita: 127, anak: 213, dewasa: 425, lansia: 85,
-                ibu_hamil: 14, disabilitas: 10, updated_by: operator.id,
-            }
-        });
-        console.log('✅ Shelters & Refugees seeded');
 
-        // ── Health Reports ───────────────────────────────────────
+        // ── 5. Health Reports ───────────────────────────────────────
         await HealthReport.findOrCreate({
-            where: { shelter_id: shelter1.id, disease_name: 'ISPA' }, defaults: {
-                case_count: 142, severity: 'sedang', notes: 'Penyakit dominan, perlu masker dan obat batuk.',
-                reported_by: operator.id,
+            where: { shelter_id: shelter1.id, disease_name: 'Gatal-gatal' }, defaults: {
+                case_count: 85, severity: 'ringan', notes: 'Kurang air bersih.', reported_by: operator.id,
             }
         });
         await HealthReport.findOrCreate({
-            where: { shelter_id: shelter1.id, disease_name: 'Diare' }, defaults: {
-                case_count: 45, severity: 'sedang', notes: 'Korelasi dengan sanitasi kurang.',
-                reported_by: operator.id,
+            where: { shelter_id: shelter2.id, disease_name: 'Diare' }, defaults: {
+                case_count: 112, severity: 'sedang', notes: 'Sanitasi darurat penuh.', reported_by: operator.id,
             }
         });
-        console.log('✅ Health reports seeded');
 
-        // ── Warehouses & Inventory ───────────────────────────────
-        const [whProv] = await Warehouse.findOrCreate({
-            where: { name: 'Gudang Provinsi (Utama)' }, defaults: {
-                level: 'provinsi', location_name: 'Kantor BPBD Provinsi',
-                latitude: -6.20, longitude: 106.80, capacity_pct: 85, status: 'aktif',
-            }
-        });
-        const [whKabA] = await Warehouse.findOrCreate({
-            where: { name: 'Gudang Kab. A (Zona Merah)' }, defaults: {
-                level: 'kabupaten', location_name: 'Kabupaten A',
-                latitude: -6.60, longitude: 107.20, capacity_pct: 92, status: 'aktif',
-            }
-        });
-        const items = [
-            { warehouse_id: whProv.id, item_name: 'Beras', unit: 'Ton', stock_quantity: 45, daily_consumption: 8, min_threshold: 10 },
-            { warehouse_id: whProv.id, item_name: 'Air Bersih', unit: 'KL', stock_quantity: 120, daily_consumption: 40, min_threshold: 40 },
-            { warehouse_id: whProv.id, item_name: 'Tenda', unit: 'Unit', stock_quantity: 350, daily_consumption: 120, min_threshold: 50 },
-            { warehouse_id: whProv.id, item_name: 'Obat-obatan', unit: 'Box', stock_quantity: 85, daily_consumption: 15, min_threshold: 10 },
-            { warehouse_id: whKabA.id, item_name: 'Beras', unit: 'Ton', stock_quantity: 10, daily_consumption: 5, min_threshold: 5 },
-            { warehouse_id: whKabA.id, item_name: 'Air Bersih', unit: 'KL', stock_quantity: 25, daily_consumption: 20, min_threshold: 20 },
-            { warehouse_id: whKabA.id, item_name: 'Tenda', unit: 'Unit', stock_quantity: 120, daily_consumption: 30, min_threshold: 20 },
-        ];
-        for (const item of items) {
-            await InventoryItem.findOrCreate({ where: { warehouse_id: item.warehouse_id, item_name: item.item_name }, defaults: item });
-        }
-        console.log('✅ Warehouses & Inventory seeded');
-
-        // ── Shipments ────────────────────────────────────────────
-        await LogisticsShipment.findOrCreate({
-            where: { shipment_code: 'TRK-8821' }, defaults: {
-                from_warehouse_id: whProv.id, to_warehouse_id: whKabA.id,
-                cargo_description: 'Beras 5T, Air Bersih 10KL',
-                status: 'in_transit', driver_name: 'Pak Budi', vehicle_plate: 'B 1234 CD',
-                departure_time: new Date(), eta: new Date(Date.now() + 45 * 60 * 1000),
-                created_by: operator.id,
-            }
-        });
-        await LogisticsShipment.findOrCreate({
-            where: { shipment_code: 'TRK-9004' }, defaults: {
-                from_warehouse_id: whKabA.id, to_shelter_id: shelter1.id,
-                cargo_description: 'Air Bersih 5KL, Beras 2T',
-                status: 'delayed', delay_reason: 'Akses jalan terputus longsor di KM 12',
-                driver_name: 'Pak Andi', vehicle_plate: 'B 5678 EF',
-                departure_time: new Date(), created_by: operator.id,
-            }
-        });
-        console.log('✅ Shipments seeded');
-
-        // ── Operation Tasks ──────────────────────────────────────
+        // ── 6. Operation Tasks ──────────────────────────────────────
         const tasks = [
-            { event_id: event1.id, title: 'Kirim alat berat ke Desa Suka Maju yang terisolir', priority: 'critical', status: 'todo', assigned_to_opd: 'Dinas PU', estimated_hours: 2 },
-            { event_id: event1.id, title: 'Distribusi air bersih ke Posko Utama A', priority: 'high', status: 'in_progress', assigned_to_opd: 'BPBD', estimated_hours: 4 },
-            { event_id: event1.id, title: 'Evakuasi warga rentan di Zona Merah Banjir', priority: 'critical', status: 'done', assigned_to_opd: 'Basarnas', estimated_hours: 8, completed_at: new Date() },
-            { event_id: event2.id, title: 'Pembersihan material longsor di KM 42', priority: 'high', status: 'todo', assigned_to_opd: 'Dinas PU', estimated_hours: 12 },
-            { event_id: event2.id, title: 'Perbaikan Tiang Listrik Tumbang di Jalur Evakuasi', priority: 'medium', status: 'todo', assigned_to_opd: 'PLN', estimated_hours: 6 },
+            { event_id: event1.id, title: 'Distribusi Logistik Makanan Siap Saji Dolo', priority: 'high', status: 'in_progress', assigned_to_opd: 'Dinas Sosial', estimated_hours: 4 },
+            { event_id: event1.id, title: 'Pemasangan Jembatan Bailey Darurat Sigi', priority: 'critical', status: 'todo', assigned_to_opd: 'Dinas PU', estimated_hours: 48 },
+            { event_id: event2.id, title: 'Pembersihan Material Longsor Kebun Kopi', priority: 'critical', status: 'in_progress', assigned_to_opd: 'Balai Jalan', estimated_hours: 24 },
+            { event_id: event3.id, title: 'Asesmen Kerusakan Bangunan Poso Pesisir', priority: 'medium', status: 'todo', assigned_to_opd: 'BPBD M&E', estimated_hours: 72 },
+            { event_id: event3.id, title: 'Mendirikan Tenda Darurat RSUD Poso', priority: 'critical', status: 'done', assigned_to_opd: 'TNI/Polri', estimated_hours: 6 },
         ];
         for (const t of tasks) {
             await OperationTask.findOrCreate({ where: { title: t.title }, defaults: { ...t, created_by: operator.id } });
         }
-        console.log('✅ Operation tasks seeded');
 
-        // ── Decision Logs ────────────────────────────────────────
+        // ── 7. Decision Logs ────────────────────────────────────────
         await DecisionLog.findOrCreate({
-            where: { decision_text: 'Setujui pencairan BTT Tahap 1 sebesar Rp 12 Miliar untuk logistik darurat.' }, defaults: {
-                event_id: event1.id, decided_by: 'Gubernur', decided_at: new Date(), created_by: admin.id,
+            where: { decision_text: 'Gubernur menetapkan status Tanggap Darurat Bencana Gempa Bumi di Kab. Poso selama 14 Hari.' }, defaults: {
+                event_id: event3.id,
+                decided_by: 'Gubernur', decided_at: new Date(Date.now() - 2 * 86400000), created_by: admin.id,
             }
         });
         await DecisionLog.findOrCreate({
-            where: { decision_text: 'Aktifkan Tim Reaksi Cepat (TRC) lintas OPD, status Tanggap Darurat ditetapkan 14 Hari.' }, defaults: {
-                event_id: event1.id, decided_by: 'Kepala BPBD', decided_at: new Date(Date.now() - 86400000), created_by: admin.id,
+            where: { decision_text: 'Instruksi langsung ke Kadis PU untuk mengerahkan 4 alat berat ke Jalur Kebun Kopi malam ini juga.' }, defaults: {
+                event_id: event2.id,
+                decided_by: 'Kepala BPBD Provinsi', decided_at: new Date(), created_by: admin.id,
             }
         });
-        console.log('✅ Decision logs seeded');
 
-        // ── Budget & Expenditures ────────────────────────────────
+        // ── 8. Budget & Expenditures ────────────────────────────────
         const [alloc1] = await BudgetAllocation.findOrCreate({
-            where: { sector: 'Logistik & Pangan' }, defaults: {
-                event_id: event1.id, source: 'BTT', total_amount: 20000000000, // Rp 20M
-                allocated_at: new Date(),
+            where: { event_id: event3.id, sector: 'Logistik & Dapur Umum' }, defaults: {
+                source: 'BTT', total_amount: 5000000000, allocated_at: new Date(),
             }
         });
         const [alloc2] = await BudgetAllocation.findOrCreate({
-            where: { sector: 'Alat Berat & Evakuasi' }, defaults: {
-                event_id: event1.id, source: 'BTT', total_amount: 15000000000,
-                allocated_at: new Date(),
+            where: { event_id: event1.id, sector: 'Sewa Alat Berat & Evakuasi' }, defaults: {
+                source: 'BTT', total_amount: 1500000000, allocated_at: new Date(),
+            }
+        });
+
+        await DailyExpenditure.findOrCreate({
+            where: { allocation_id: alloc1.id, expenditure_date: new Date() }, defaults: {
+                amount: 1200000000, description: 'Pembelian logistik permakanan dan selimut untuk Poso', verified_by: admin.id,
             }
         });
         await DailyExpenditure.findOrCreate({
-            where: { allocation_id: alloc1.id, expenditure_date: new Date().toISOString().split('T')[0] }, defaults: {
-                amount: 3500000000, description: 'Pembelian beras dan distribusi air bersih', verified_by: admin.id,
+            where: { allocation_id: alloc2.id, expenditure_date: new Date() }, defaults: {
+                amount: 450000000, description: 'Operasional alat berat di Sigi (BBM & Operator)', verified_by: admin.id,
             }
         });
-        await DailyExpenditure.findOrCreate({
-            where: { allocation_id: alloc2.id, expenditure_date: new Date().toISOString().split('T')[0] }, defaults: {
-                amount: 4200000000, description: 'Sewa alat berat dan bahan bakar operasional', verified_by: admin.id,
-            }
-        });
-        console.log('✅ Budget & expenditures seeded');
 
-        console.log('\n🎉 Seeding selesai!');
-        console.log('───────────────────────────────────────');
-        console.log('Login credentials (password: admin123):');
-        console.log('  superadmin@bpbd.go.id (superadmin)');
-        console.log('  admin@bpbd.go.id (admin)');
-        console.log('  operator@bpbd.go.id (operator)');
-        console.log('───────────────────────────────────────');
-
+        console.log('✅ Seeding success! Bencana: Banjir, Longsor, Gempa, Karhutla.');
         process.exit(0);
+
     } catch (err) {
         console.error('❌ Seeding error:', err);
         process.exit(1);

@@ -8,6 +8,7 @@ import LogisticsPage from '../features/logistics/LogisticsPage';
 import RefugeesPage from '../features/refugees/RefugeesPage';
 import FundingPage from '../features/funding/FundingPage';
 import AdminPage from '../features/admin/AdminPage';
+import InstructionLogPage from '../features/instructions/InstructionLogPage';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 
 const router = createBrowserRouter([
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
             { path: 'refugees', element: <RefugeesPage /> },
             { path: 'funding', element: <FundingPage /> },
             { path: 'admin', element: <AdminPage /> },
+            { path: 'instruksi', element: <InstructionLogPage /> },
         ],
     },
 ]);

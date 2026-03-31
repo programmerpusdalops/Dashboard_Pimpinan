@@ -13,6 +13,7 @@ const ROLE_HIERARCHY = {
     operator: 2,
     admin: 3,
     superadmin: 4,
+    pimpinan: 5,
 };
 
 export function usePermission() {
@@ -32,5 +33,6 @@ export function usePermission() {
         isOperator: userLevel >= ROLE_HIERARCHY.operator,
         isAdmin: userLevel >= ROLE_HIERARCHY.admin,
         isSuperAdmin: userLevel >= ROLE_HIERARCHY.superadmin,
+        isPimpinan: user?.role === 'pimpinan',
     };
 }

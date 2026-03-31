@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Landmark, TrendingUp, Wallet, AlertTriangle, Plus, X, PieChart as PieIcon } from 'lucide-react';
+import { Landmark, TrendingUp, Wallet, AlertTriangle, PieChart as PieIcon, Filter } from 'lucide-react';
 import {
     LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
     BarChart, Bar, CartesianGrid, Legend, ReferenceLine,
 } from 'recharts';
-import { useFundingSummary, useBurnRate, useAllocations, useCreateAllocation, useCreateExpenditure } from './hooks/useFunding';
-import { usePermission } from '../../hooks/usePermission';
+import { useFundingSummary, useBurnRate, useAllocations, useExpenditures } from './hooks/useFunding';
 
 // ── Helpers ──────────────────────────────────────────────────────
 const fmt = (val) => {
@@ -25,30 +24,26 @@ const TOOLTIP_STYLE = {
 };
 
 const SEKTOR_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#94a3b8', '#ef4444', '#a78bfa'];
-
-const EMPTY_ALLOC = { sektor: '', amount: '', description: '' };
-const EMPTY_EXP = { description: '', amount: '', sektor: '', expenditure_date: new Date().toISOString().slice(0, 10) };
+const SOURCES = ['BTT', 'BNPB', 'Kemensos', 'Donasi', 'Lainnya'];
+const SOURCE_COLORS = { BTT: '#f59e0b', BNPB: '#3b82f6', Kemensos: '#10b981', Donasi: '#8b5cf6', Lainnya: '#ef4444' };
 
 // ── Main Page ────────────────────────────────────────────────────
 export default function FundingPage() {
     const [activeTab, setActiveTab] = useState('overview');
-    const [showAllocForm, setShowAllocForm] = useState(false);
-    const [showExpForm, setShowExpForm] = useState(false);
-    const [allocForm, setAllocForm] = useState(EMPTY_ALLOC);
-    const [expForm, setExpForm] = useState(EMPTY_EXP);
+    const [filterSource, setFilterSource] = useState('');
 
-    const { isAdmin } = usePermission();
+    const summaryParams = filterSource ? { source: filterSource } : {};
+    const allocParams = filterSource ? { source: filterSource } : {};
 
-    const { data: funding, isLoading: fLoading } = useFundingSummary();
+    const { data: funding, isLoading: fLoading } = useFundingSummary(summaryParams);
     const { data: burnRate, isLoading: brLoading } = useBurnRate();
-    const { data: allocs, isLoading: aLoading } = useAllocations();
-    const createAlloc = useCreateAllocation();
-    const createExp = useCreateExpenditure();
+    const { data: allocs, isLoading: aLoading } = useAllocations(allocParams);
+    const { data: expenditures, isLoading: expLoading } = useExpenditures();
 
     // Chart data
     const burnChartData = (Array.isArray(burnRate) ? burnRate : []).map(d => ({
         tanggal: new Date(d.expenditure_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
-        realisasi: Number(d.amount) / 1e6, // dalam juta
+        realisasi: Number(d.amount) / 1e6,
         dailyAvg: funding?.avgDailyBurn ? Number(funding.avgDailyBurn) / 1e6 : undefined,
     }));
 
@@ -56,19 +51,10 @@ export default function FundingPage() {
         ? Object.entries(funding.sektorBreakdown)
         : [];
 
-    const handleCreateAlloc = async (e) => {
-        e.preventDefault();
-        await createAlloc.mutateAsync({ ...allocForm, amount: Number(allocForm.amount) });
-        setAllocForm(EMPTY_ALLOC);
-        setShowAllocForm(false);
-    };
+    const sourceEntries = funding?.sourceBreakdown
+        ? Object.entries(funding.sourceBreakdown)
+        : [];
 
-    const handleCreateExp = async (e) => {
-        e.preventDefault();
-        await createExp.mutateAsync({ ...expForm, amount: Number(expForm.amount) });
-        setExpForm(EMPTY_EXP);
-        setShowExpForm(false);
-    };
 
     const persen = funding?.persenRealisasi ?? 0;
     const isOverBudget = persen >= 90;
@@ -76,10 +62,30 @@ export default function FundingPage() {
     return (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
 
+            {/* ── Source Filter ── */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Filter size={14} style={{ color: 'var(--text-muted)' }} />
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: 4 }}>Sumber Dana:</span>
+                <button
+                    className={`btn ${filterSource === '' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+                    onClick={() => setFilterSource('')}>
+                    Semua
+                </button>
+                {SOURCES.map(s => (
+                    <button key={s}
+                        className={`btn ${filterSource === s ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+                        onClick={() => setFilterSource(s)}>
+                        {s}
+                    </button>
+                ))}
+            </div>
+
             {/* ── KPI Cards ── */}
             <div className="kpi-grid" style={{ marginBottom: 20 }}>
                 <div className="kpi-card info">
-                    <div className="kpi-title"><Landmark size={13} /> Pagu BTT</div>
+                    <div className="kpi-title"><Landmark size={13} /> Total Pagu {filterSource || ''}</div>
                     <div className="kpi-value" style={{ fontSize: '1.3rem' }}>
                         {fLoading ? '—' : fmt(funding?.totalPagu)}
                     </div>
@@ -106,10 +112,44 @@ export default function FundingPage() {
                 )}
             </div>
 
+            {/* ── Dana per Sumber ── */}
+            <div style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                        Dana per Sumber
+                    </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                    {SOURCES.map(src => {
+                        const data = funding?.sourceBreakdown?.[src];
+                        const pagu = data?.pagu ?? 0;
+                        const real = data?.realisasi ?? 0;
+                        return (
+                            <div key={src} className="card" style={{
+                                padding: '10px 14px', cursor: 'pointer',
+                                border: filterSource === src ? '2px solid var(--accent-primary)' : undefined,
+                            }}
+                                onClick={() => setFilterSource(filterSource === src ? '' : src)}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: SOURCE_COLORS[src] || '#94a3b8' }} />
+                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)' }}>{src}</span>
+                                </div>
+                                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: pagu > 0 ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                                    {pagu > 0 ? fmt(pagu) : 'Rp 0'}
+                                </div>
+                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                                    Realisasi: {fmt(real)}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
             {/* ── Progress Bar Serapan ── */}
             <div style={{ marginBottom: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    <span>Serapan Anggaran</span>
+                    <span>Serapan Anggaran {filterSource ? `(${filterSource})` : ''}</span>
                     <span style={{ fontWeight: 700, color: isOverBudget ? 'var(--status-red)' : 'var(--status-green)' }}>
                         {persen}%
                     </span>
@@ -131,7 +171,7 @@ export default function FundingPage() {
                         className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-outline'}`}
                         style={{ padding: '6px 14px', fontSize: '0.78rem', textTransform: 'capitalize' }}
                         onClick={() => setActiveTab(tab)}>
-                        {tab === 'overview' ? 'Grafik & Serapan' : tab === 'alokasi' ? 'Alokasi Anggaran' : 'Pencatatan Pengeluaran'}
+                        {tab === 'overview' ? 'Grafik & Serapan' : tab === 'alokasi' ? 'Alokasi Anggaran' : 'Realisasi Pengeluaran'}
                     </button>
                 ))}
             </div>
@@ -207,69 +247,45 @@ export default function FundingPage() {
             {activeTab === 'alokasi' && (
                 <div className="card">
                     <div className="card-header">
-                        <div className="card-title">Alokasi Anggaran per Sektor</div>
-                        {isAdmin && (
-                            <button
-                                className={`btn ${showAllocForm ? 'btn-outline' : 'btn-primary'}`}
-                                style={{ padding: '6px 12px', fontSize: '0.78rem' }}
-                                onClick={() => setShowAllocForm(v => !v)}>
-                                {showAllocForm ? <X size={13} /> : <Plus size={13} />}
-                                {showAllocForm ? ' Tutup' : ' Tambah Alokasi'}
-                            </button>
-                        )}
+                        <div className="card-title">Alokasi Anggaran per Sektor {filterSource ? `(${filterSource})` : ''}</div>
                     </div>
-
-                    {showAllocForm && (
-                        <form onSubmit={handleCreateAlloc}
-                            style={{
-                                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 10, marginBottom: 16,
-                                padding: 12, background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)'
-                            }}>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Nama Sektor / Kegiatan</label>
-                                <input className="form-input" value={allocForm.sektor}
-                                    onChange={e => setAllocForm({ ...allocForm, sektor: e.target.value })} required />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Jumlah (Rp)</label>
-                                <input className="form-input" type="number" value={allocForm.amount}
-                                    onChange={e => setAllocForm({ ...allocForm, amount: e.target.value })} required />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Keterangan</label>
-                                <input className="form-input" value={allocForm.description}
-                                    onChange={e => setAllocForm({ ...allocForm, description: e.target.value })} />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                <button type="submit" className="btn btn-primary"
-                                    disabled={createAlloc.isPending}>
-                                    {createAlloc.isPending ? '...' : 'Simpan'}
-                                </button>
-                            </div>
-                        </form>
-                    )}
 
                     {aLoading ? (
                         <div className="skeleton" style={{ height: 150 }} />
                     ) : !allocs || allocs.length === 0 ? (
                         <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>
-                            Belum ada alokasi anggaran.
+                            Belum ada alokasi anggaran {filterSource ? `dari ${filterSource}` : ''}.
                         </p>
                     ) : (
                         <table className="data-table">
                             <thead>
-                                <tr><th>Sektor / Kegiatan</th><th>Alokasi</th><th>Realisasi</th><th>Sisa</th><th>Progress</th></tr>
+                                <tr>
+                                    <th>Sumber</th><th>Sektor / Kegiatan</th>
+                                    <th style={{ textAlign: 'right' }}>Alokasi</th>
+                                    <th style={{ textAlign: 'right' }}>Realisasi</th>
+                                    <th style={{ textAlign: 'right' }}>Sisa</th>
+                                    <th>Progress</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 {allocs.map(a => {
-                                    const pct = a.allocated > 0 ? Math.min(100, Math.round((a.realized / a.allocated) * 100)) : 0;
+                                    const realized = a.realized ?? 0;
+                                    const allocated = Number(a.total_amount ?? a.allocated ?? a.amount ?? 0);
+                                    const sisa = allocated - realized;
+                                    const pct = allocated > 0 ? Math.min(100, Math.round((realized / allocated) * 100)) : 0;
                                     return (
                                         <tr key={a.id}>
-                                            <td style={{ fontWeight: 600 }}>{a.sektor ?? a.category ?? '—'}</td>
-                                            <td>{fmt(a.allocated ?? a.amount)}</td>
-                                            <td>{fmt(a.realized ?? 0)}</td>
-                                            <td style={{ color: (a.allocated - (a.realized ?? 0)) < 0 ? 'var(--status-red)' : 'var(--status-green)' }}>
-                                                {fmt((a.allocated ?? a.amount) - (a.realized ?? 0))}
+                                            <td>
+                                                <span className="pill" style={{
+                                                    background: `${SOURCE_COLORS[a.source] || '#94a3b8'}22`,
+                                                    color: SOURCE_COLORS[a.source] || '#94a3b8',
+                                                }}>{a.source}</span>
+                                            </td>
+                                            <td style={{ fontWeight: 600 }}>{a.sector ?? a.sektor ?? a.category ?? '—'}</td>
+                                            <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{fmt(allocated)}</td>
+                                            <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--status-yellow)' }}>{fmt(realized)}</td>
+                                            <td style={{ textAlign: 'right', fontFamily: 'monospace', color: sisa < 0 ? 'var(--status-red)' : 'var(--status-green)' }}>
+                                                {fmt(sisa)}
                                             </td>
                                             <td style={{ minWidth: 100 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -294,74 +310,94 @@ export default function FundingPage() {
 
             {/* ── Pengeluaran Tab ── */}
             {activeTab === 'pengeluaran' && (
-                <div className="card">
-                    <div className="card-header">
-                        <div className="card-title">Pencatatan Pengeluaran Harian</div>
-                        {isAdmin && (
-                            <button
-                                className={`btn ${showExpForm ? 'btn-outline' : 'btn-primary'}`}
-                                style={{ padding: '6px 12px', fontSize: '0.78rem' }}
-                                onClick={() => setShowExpForm(v => !v)}>
-                                {showExpForm ? <X size={13} /> : <Plus size={13} />}
-                                {showExpForm ? ' Tutup' : ' Catat Pengeluaran'}
-                            </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {/* Chart */}
+                    <div className="card">
+                        <div className="card-header">
+                            <div className="card-title">Grafik Pengeluaran Harian</div>
+                        </div>
+                        {brLoading ? (
+                            <div className="skeleton" style={{ height: 150 }} />
+                        ) : burnChartData.length === 0 ? (
+                            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>
+                                Belum ada data pengeluaran.
+                            </p>
+                        ) : (
+                            <div className="chart-container" style={{ height: 280, marginTop: 8 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={burnChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                        <XAxis dataKey="tanggal" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                                        <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={v => `${v}Jt`} />
+                                        <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`Rp ${v.toFixed(1)} Juta`]} />
+                                        <Bar dataKey="realisasi" name="Pengeluaran" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         )}
                     </div>
 
-                    {showExpForm && (
-                        <form onSubmit={handleCreateExp}
-                            style={{
-                                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 10, marginBottom: 16,
-                                padding: 12, background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)'
-                            }}>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Keterangan *</label>
-                                <input className="form-input" value={expForm.description}
-                                    onChange={e => setExpForm({ ...expForm, description: e.target.value })} required />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Jumlah (Rp)</label>
-                                <input className="form-input" type="number" value={expForm.amount}
-                                    onChange={e => setExpForm({ ...expForm, amount: e.target.value })} required />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Sektor</label>
-                                <input className="form-input" value={expForm.sektor}
-                                    onChange={e => setExpForm({ ...expForm, sektor: e.target.value })} />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Tanggal</label>
-                                <input className="form-input" type="date" value={expForm.expenditure_date}
-                                    onChange={e => setExpForm({ ...expForm, expenditure_date: e.target.value })} />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                <button type="submit" className="btn btn-primary"
-                                    disabled={createExp.isPending}>
-                                    {createExp.isPending ? '...' : 'Simpan'}
-                                </button>
-                            </div>
-                        </form>
-                    )}
-
-                    {brLoading ? (
-                        <div className="skeleton" style={{ height: 150 }} />
-                    ) : burnChartData.length === 0 ? (
-                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>
-                            Belum ada data pengeluaran.
-                        </p>
-                    ) : (
-                        <div className="chart-container" style={{ height: 300, marginTop: 8 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={burnChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                    <XAxis dataKey="tanggal" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                                    <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={v => `${v}Jt`} />
-                                    <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`Rp ${v.toFixed(1)} Juta`]} />
-                                    <Bar dataKey="realisasi" name="Pengeluaran" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                    {/* Detail Table */}
+                    <div className="card">
+                        <div className="card-header">
+                            <div className="card-title">Rincian Pengeluaran</div>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                {expLoading ? '...' : `${(expenditures || []).length} catatan`}
+                            </span>
                         </div>
-                    )}
+                        {expLoading ? (
+                            <div className="skeleton" style={{ height: 150 }} />
+                        ) : !expenditures || expenditures.length === 0 ? (
+                            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>
+                                Belum ada catatan pengeluaran.
+                            </p>
+                        ) : (
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tanggal</th>
+                                        <th>Sumber — Sektor</th>
+                                        <th>Keterangan</th>
+                                        <th style={{ textAlign: 'right' }}>Jumlah</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {expenditures.map(exp => {
+                                        const alloc = (allocs || []).find(a => a.id === exp.allocation_id);
+                                        return (
+                                            <tr key={exp.id}>
+                                                <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                                    {exp.expenditure_date
+                                                        ? new Date(exp.expenditure_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                                        : '—'}
+                                                </td>
+                                                <td>
+                                                    {alloc ? (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                            <span className="pill" style={{
+                                                                background: `${SOURCE_COLORS[alloc.source] || '#94a3b8'}22`,
+                                                                color: SOURCE_COLORS[alloc.source] || '#94a3b8',
+                                                                fontSize: '0.7rem',
+                                                            }}>{alloc.source}</span>
+                                                            <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{alloc.sector}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                                    )}
+                                                </td>
+                                                <td style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>
+                                                    {exp.description || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Tidak ada keterangan</span>}
+                                                </td>
+                                                <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: 'var(--status-red)', whiteSpace: 'nowrap' }}>
+                                                    -{fmt(exp.amount)}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

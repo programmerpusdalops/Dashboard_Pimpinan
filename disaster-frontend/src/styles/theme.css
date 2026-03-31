@@ -1,4 +1,6 @@
-/* ── Design System — Disaster Dashboard Dark Theme ──────────── */
+/* ── Design System — Disaster Dashboard Theme ──────────────── */
+
+/* ── DARK MODE (default) ──────────────────────────────────── */
 :root {
   /* Background layers */
   --bg-primary: #0a0e1a;
@@ -54,4 +56,98 @@
   --sidebar-width: 260px;
   --sidebar-collapsed: 72px;
   --topbar-height: 60px;
+
+  /* Leaflet (for overrides in index.css) */
+  --leaflet-popup-bg: #1a1f2e;
+  --leaflet-popup-border: rgba(255, 255, 255, 0.08);
+  --leaflet-popup-shadow: rgba(0, 0, 0, 0.6);
+  --leaflet-popup-text: #e2e8f0;
+  --leaflet-zoom-bg: rgba(17, 24, 39, 0.95);
+  --leaflet-zoom-color: #94a3b8;
+  --leaflet-zoom-hover-bg: rgba(59, 130, 246, 0.2);
+  --leaflet-zoom-hover-color: #3b82f6;
+
+  /* Map page — overlays, sidebar, text */
+  --map-overlay-bg: rgba(17, 24, 39, 0.92);
+  --map-sidebar-bg: rgba(13, 17, 23, 0.97);
+  --map-dropdown-bg: rgba(17, 24, 39, 0.97);
+  --map-border: rgba(255, 255, 255, 0.06);
+  --map-text-main: #e2e8f0;
+  --map-text-sec: #94a3b8;
+  --map-text-muted: #64748b;
+  --map-item-active: rgba(255, 255, 255, 0.04);
+  --map-item-hover: rgba(255, 255, 255, 0.03);
+  --map-btn-bg: rgba(255, 255, 255, 0.05);
+  --map-bar-track: rgba(255, 255, 255, 0.08);
+}
+
+/* ── LIGHT MODE — Warm Orange Theme ───────────────────────── */
+[data-theme="light"] {
+  /* Background layers */
+  --bg-primary: #faf8f5;
+  --bg-secondary: #f3efe8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fdf5ec;
+  --bg-sidebar: #f5f0ea;
+  --bg-topbar: rgba(255, 255, 255, 0.92);
+  --bg-input: #ffffff;
+
+  /* Text */
+  --text-main: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #a8a29e;
+
+  /* Accent — warm orange palette */
+  --accent-primary: #ea580c;
+  --accent-primary-hover: #c2410c;
+  --accent-glow: rgba(234, 88, 12, 0.15);
+
+  /* Status — keep vibrant but slightly adjusted for light bg */
+  --status-red: #dc2626;
+  --status-red-bg: rgba(220, 38, 38, 0.08);
+  --status-yellow: #d97706;
+  --status-yellow-bg: rgba(217, 119, 6, 0.08);
+  --status-green: #059669;
+  --status-green-bg: rgba(5, 150, 105, 0.08);
+  --status-blue: #2563eb;
+  --status-blue-bg: rgba(37, 99, 235, 0.08);
+
+  /* Border */
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-hover: rgba(0, 0, 0, 0.15);
+
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --shadow-glow-blue: 0 0 20px rgba(234, 88, 12, 0.12);
+
+  /* Leaflet */
+  --leaflet-popup-bg: #ffffff;
+  --leaflet-popup-border: rgba(0, 0, 0, 0.1);
+  --leaflet-popup-shadow: rgba(0, 0, 0, 0.12);
+  --leaflet-popup-text: #1c1917;
+  --leaflet-zoom-bg: rgba(255, 255, 255, 0.96);
+  --leaflet-zoom-color: #57534e;
+  --leaflet-zoom-hover-bg: rgba(234, 88, 12, 0.1);
+  --leaflet-zoom-hover-color: #ea580c;
+
+  /* Map page */
+  --map-overlay-bg: rgba(255, 255, 255, 0.92);
+  --map-sidebar-bg: rgba(255, 255, 255, 0.97);
+  --map-dropdown-bg: rgba(255, 255, 255, 0.97);
+  --map-border: rgba(0, 0, 0, 0.1);
+  --map-text-main: #1c1917;
+  --map-text-sec: #57534e;
+  --map-text-muted: #a8a29e;
+  --map-item-active: rgba(234, 88, 12, 0.06);
+  --map-item-hover: rgba(0, 0, 0, 0.03);
+  --map-btn-bg: rgba(0, 0, 0, 0.05);
+  --map-bar-track: rgba(0, 0, 0, 0.08);
+}
+
+/* ── Smooth theme transition ──────────────────────────────── */
+html,
+html * {
+  transition: background-color 0.3s ease, color 0.15s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }

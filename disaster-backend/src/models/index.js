@@ -13,6 +13,7 @@ const OperationTask = require('./OperationTask');
 const DecisionLog = require('./DecisionLog');
 const BudgetAllocation = require('./BudgetAllocation');
 const DailyExpenditure = require('./DailyExpenditure');
+const Instruction = require('./Instruction');
 
 // ── DisasterEvent associations ──────────────────────────────
 DisasterEvent.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
@@ -60,6 +61,10 @@ BudgetAllocation.hasMany(DailyExpenditure, { foreignKey: 'allocation_id', as: 'e
 DailyExpenditure.belongsTo(BudgetAllocation, { foreignKey: 'allocation_id' });
 DailyExpenditure.belongsTo(User, { foreignKey: 'verified_by', as: 'verifier' });
 
+// ── Instruction associations ───────────────────────────────
+Instruction.belongsTo(User, { foreignKey: 'from_user_id', as: 'sender' });
+Instruction.belongsTo(User, { foreignKey: 'responded_by', as: 'responder' });
+
 module.exports = {
     sequelize,
     User, DisasterEvent, Casualty,
@@ -67,4 +72,5 @@ module.exports = {
     Warehouse, InventoryItem, LogisticsShipment,
     OperationTask, DecisionLog,
     BudgetAllocation, DailyExpenditure,
+    Instruction,
 };

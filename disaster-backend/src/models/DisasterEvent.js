@@ -24,6 +24,8 @@ const DisasterEvent = sequelize.define('DisasterEvent', {
     longitude: { type: DataTypes.DECIMAL(11, 8), allowNull: true },
     start_date: { type: DataTypes.DATEONLY, allowNull: false },
     end_date: { type: DataTypes.DATEONLY, allowNull: true },
+    posko_leader: { type: DataTypes.STRING(200), allowNull: true },
+    posko_leader_position: { type: DataTypes.STRING(200), allowNull: true },
     description: { type: DataTypes.TEXT, allowNull: true },
     created_by: { type: DataTypes.INTEGER, allowNull: true },
 }, {

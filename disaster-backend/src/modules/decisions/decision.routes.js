@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const router = express.Router();
-const { DecisionLog, User } = require('../../models');
+const { DecisionLog, User, DisasterEvent } = require('../../models');
 const R = require('../../utils/responseHelper');
 const { authenticate } = require('../../middlewares/auth.middleware');
 const { isAdmin } = require('../../middlewares/rbac.middleware');
@@ -13,7 +13,10 @@ router.get('/', authenticate, async (req, res, next) => {
         if (event_id) where.event_id = event_id;
         R.success(res, await DecisionLog.findAll({
             where,
-            include: [{ model: User, as: 'creator', attributes: ['id', 'name'] }],
+            include: [
+                { model: User, as: 'creator', attributes: ['id', 'name'] },
+                { model: DisasterEvent, attributes: ['id', 'title'] }
+            ],
             order: [['decided_at', 'DESC']],
         }));
     } catch (e) { next(e); }

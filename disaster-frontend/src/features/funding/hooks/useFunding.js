@@ -7,16 +7,16 @@ import { fundingService } from '../../../services/funding.service';
 import { toast } from '../../../lib/toast';
 
 export const fundingKeys = {
-    summary: () => ['funding', 'summary'],
+    summary: (params) => ['funding', 'summary', params],
     burnRate: () => ['funding', 'burn-rate'],
-    allocations: () => ['funding', 'allocations'],
+    allocations: (params) => ['funding', 'allocations', params],
     expenditures: () => ['funding', 'expenditures'],
 };
 
-export function useFundingSummary() {
+export function useFundingSummary(params = {}) {
     return useQuery({
-        queryKey: fundingKeys.summary(),
-        queryFn: fundingService.getSummary,
+        queryKey: fundingKeys.summary(params),
+        queryFn: () => fundingService.getSummary(params),
         staleTime: 1000 * 60 * 5,
     });
 }
@@ -29,17 +29,17 @@ export function useBurnRate() {
     });
 }
 
-export function useAllocations() {
+export function useAllocations(params = {}) {
     return useQuery({
-        queryKey: fundingKeys.allocations(),
-        queryFn: fundingService.getAllocations,
+        queryKey: fundingKeys.allocations(params),
+        queryFn: () => fundingService.getAllocations(params),
     });
 }
 
 export function useExpenditures() {
     return useQuery({
         queryKey: fundingKeys.expenditures(),
-        queryFn: fundingService.getExpenditures,
+        queryFn: () => fundingService.getExpenditures(),
     });
 }
 

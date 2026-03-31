@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import {
     Users as UsersIcon, Plus, X, Trash2, ToggleLeft, ToggleRight,
-    AlertCircle, Search, ShieldCheck, UserPlus, RefreshCw, ChevronLeft, ChevronRight as ChevRight,
+    AlertCircle, Search, ShieldCheck, UserPlus, RefreshCw,
+    ChevronLeft, ChevronRight as ChevRight,
+    ClipboardList, Truck, Tent, DollarSign, ScrollText, Edit2,
 } from 'lucide-react';
 import { useUsers, useCreateUser, useUpdateUser, useToggleUserActive, useDeleteUser } from './hooks/useAdmin';
 import { eventsService } from '../../services/events.service';
@@ -9,6 +11,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePermission } from '../../hooks/usePermission';
 import { useDebounce } from '../../hooks/useDebounce';
 import { toast } from '../../lib/toast';
+
+// ── Tab Imports ──────────────────────────────────────────────────
+import OperationsTab from './tabs/OperationsTab';
+import LogisticsTab from './tabs/LogisticsTab';
+import RefugeesTab from './tabs/RefugeesTab';
+import FundingTab from './tabs/FundingTab';
+import DecisionsTab from './tabs/DecisionsTab';
 
 // ── Constants ────────────────────────────────────────────────────
 const ROLES = ['viewer', 'operator', 'admin', 'superadmin'];
@@ -28,7 +37,18 @@ const EVENT_SEV_STYLE = {
 };
 
 const EMPTY_USER = { name: '', email: '', password: '', role: 'operator', opd: '' };
-const EMPTY_EVENT = { title: '', type: 'banjir', status: 'siaga', severity: 'ringan', location_name: '', start_date: '' };
+const EMPTY_EVENT = { title: '', type: 'banjir', status: 'siaga', severity: 'ringan', location_name: '', start_date: '', posko_leader: '', posko_leader_position: '' };
+
+// ── Tab definitions ──────────────────────────────────────────────
+const TABS = [
+    { key: 'users', label: 'User', icon: UsersIcon },
+    { key: 'events', label: 'Kejadian', icon: AlertCircle },
+    { key: 'operations', label: 'Operasi', icon: ClipboardList },
+    { key: 'logistics', label: 'Logistik & Peralatan', icon: Truck },
+    { key: 'refugees', label: 'Pengungsi', icon: Tent },
+    { key: 'funding', label: 'Pendanaan', icon: DollarSign },
+    { key: 'decisions', label: 'Keputusan', icon: ScrollText },
+];
 
 // ── User Form Modal ──────────────────────────────────────────────
 function UserForm({ onClose, initial }) {
@@ -126,7 +146,6 @@ function UsersTab() {
     const toggleActive = useToggleUserActive();
     const deleteUser = useDeleteUser();
 
-    // Client-side filter by search (karena backend tidak support search by name yet)
     const filtered = debouncedSearch
         ? users.filter(u =>
             u.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -137,7 +156,6 @@ function UsersTab() {
 
     return (
         <div>
-            {/* Form */}
             {showForm && !editUser && (
                 <UserForm onClose={() => setShowForm(false)} />
             )}
@@ -145,7 +163,6 @@ function UsersTab() {
                 <UserForm initial={editUser} onClose={() => setEditUser(null)} />
             )}
 
-            {/* Toolbar */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
                     <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -167,7 +184,6 @@ function UsersTab() {
                 </button>
             </div>
 
-            {/* Table */}
             <div className="card">
                 <div className="card-header">
                     <div className="card-title"><UsersIcon size={14} /> DAFTAR USER SISTEM</div>
@@ -236,7 +252,6 @@ function UsersTab() {
                             </tbody>
                         </table>
 
-                        {/* Pagination */}
                         {pagination && pagination.totalPages > 1 && (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 14 }}>
                                 <button className="btn btn-outline" style={{ padding: '5px 10px' }}
@@ -262,6 +277,7 @@ function UsersTab() {
 // ── Events Tab ───────────────────────────────────────────────────
 function EventsTab() {
     const [showForm, setShowForm] = useState(false);
+    const [editEvent, setEditEvent] = useState(null);
     const [form, setForm] = useState(EMPTY_EVENT);
     const [page, setPage] = useState(1);
     const qc = useQueryClient();
@@ -285,6 +301,17 @@ function EventsTab() {
         onError: err => toast.error(err.response?.data?.message ?? 'Gagal membuat kejadian'),
     });
 
+    const updateEvent = useMutation({
+        mutationFn: ({ id, ...data }) => eventsService.update(id, data),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['events'] });
+            toast.success('Kejadian berhasil diperbarui');
+            setEditEvent(null);
+            setForm(EMPTY_EVENT);
+        },
+        onError: err => toast.error(err.response?.data?.message ?? 'Gagal memperbarui kejadian'),
+    });
+
     const deleteEvent = useMutation({
         mutationFn: eventsService.remove,
         onSuccess: () => {
@@ -302,9 +329,30 @@ function EventsTab() {
         },
     });
 
+    const handleEdit = (ev) => {
+        setEditEvent(ev);
+        setForm({
+            title: ev.title, type: ev.type, status: ev.status,
+            severity: ev.severity, location_name: ev.location_name,
+            start_date: ev.start_date ?? '',
+            description: ev.description ?? '',
+            latitude: ev.latitude ?? '',
+            longitude: ev.longitude ?? '',
+            posko_leader: ev.posko_leader ?? '',
+            posko_leader_position: ev.posko_leader_position ?? '',
+        });
+        setShowForm(false);
+    };
+
+    const handleSubmitEdit = (e) => {
+        e.preventDefault();
+        updateEvent.mutate({ id: editEvent.id, ...form });
+    };
+
     return (
         <div>
-            {showForm && (
+            {/* Create form */}
+            {showForm && !editEvent && (
                 <div style={{
                     padding: 14, background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)',
                     marginBottom: 16, borderLeft: '3px solid var(--status-red)'
@@ -345,10 +393,82 @@ function EventsTab() {
                             <input className="form-input" type="date" value={form.start_date}
                                 onChange={e => setForm({ ...form, start_date: e.target.value })} required />
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Ketua Posko</label>
+                            <input className="form-input" value={form.posko_leader} placeholder="Nama lengkap..."
+                                onChange={e => setForm({ ...form, posko_leader: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Jabatan (Opsional)</label>
+                            <input className="form-input" value={form.posko_leader_position} placeholder="Mis: Kalak BPBD"
+                                onChange={e => setForm({ ...form, posko_leader_position: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gridColumn: '1 / -1' }}>
                             <button type="submit" className="btn btn-primary"
                                 disabled={createEvent.isPending}>
                                 {createEvent.isPending ? '...' : 'Simpan'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* Edit form */}
+            {editEvent && (
+                <div style={{
+                    padding: 14, background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)',
+                    marginBottom: 16, borderLeft: '3px solid var(--status-yellow)'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>Edit Kejadian — {editEvent.title}</span>
+                        <button className="btn btn-outline" style={{ padding: '4px 8px' }}
+                            onClick={() => setEditEvent(null)}><X size={13} /></button>
+                    </div>
+                    <form onSubmit={handleSubmitEdit}
+                        style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto', gap: 10 }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Judul *</label>
+                            <input className="form-input" value={form.title}
+                                onChange={e => setForm({ ...form, title: e.target.value })} required />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Jenis</label>
+                            <select className="form-input" value={form.type}
+                                onChange={e => setForm({ ...form, type: e.target.value })}>
+                                {Object.entries(EVENT_TYPE_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Lokasi *</label>
+                            <input className="form-input" value={form.location_name}
+                                onChange={e => setForm({ ...form, location_name: e.target.value })} required />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Severity</label>
+                            <select className="form-input" value={form.severity}
+                                onChange={e => setForm({ ...form, severity: e.target.value })}>
+                                {['ringan', 'sedang', 'berat', 'kritis'].map(v => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Tanggal Mulai</label>
+                            <input className="form-input" type="date" value={form.start_date}
+                                onChange={e => setForm({ ...form, start_date: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Ketua Posko</label>
+                            <input className="form-input" value={form.posko_leader} placeholder="Nama lengkap..."
+                                onChange={e => setForm({ ...form, posko_leader: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Jabatan (Opsional)</label>
+                            <input className="form-input" value={form.posko_leader_position} placeholder="Mis: Kalak BPBD"
+                                onChange={e => setForm({ ...form, posko_leader_position: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gridColumn: '1 / -1' }}>
+                            <button type="submit" className="btn btn-primary"
+                                disabled={updateEvent.isPending}>
+                                {updateEvent.isPending ? '...' : 'Perbarui'}
                             </button>
                         </div>
                     </form>
@@ -364,7 +484,7 @@ function EventsTab() {
                         </button>
                         <button className={`btn ${showForm ? 'btn-outline' : 'btn-primary'}`}
                             style={{ padding: '6px 12px', fontSize: '0.78rem' }}
-                            onClick={() => setShowForm(v => !v)}>
+                            onClick={() => { setShowForm(v => !v); setEditEvent(null); setForm(EMPTY_EVENT); }}>
                             {showForm ? <X size={13} /> : <Plus size={13} />}
                             {showForm ? ' Tutup' : ' Tambah'}
                         </button>
@@ -409,11 +529,17 @@ function EventsTab() {
                                             </select>
                                         </td>
                                         <td>
-                                            <button className="btn btn-outline"
-                                                style={{ padding: '4px 8px', color: 'var(--status-red)', borderColor: 'var(--status-red)' }}
-                                                onClick={() => { if (confirm(`Hapus "${ev.title}"?`)) deleteEvent.mutate(ev.id); }}>
-                                                <Trash2 size={13} />
-                                            </button>
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                <button className="btn btn-outline" style={{ padding: '4px 8px' }}
+                                                    title="Edit" onClick={() => handleEdit(ev)}>
+                                                    <Edit2 size={13} />
+                                                </button>
+                                                <button className="btn btn-outline"
+                                                    style={{ padding: '4px 8px', color: 'var(--status-red)', borderColor: 'var(--status-red)' }}
+                                                    onClick={() => { if (confirm(`Hapus "${ev.title}"?`)) deleteEvent.mutate(ev.id); }}>
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -456,25 +582,40 @@ export default function AdminPage() {
             }}>
                 <ShieldCheck size={16} style={{ color: 'var(--status-blue)', flexShrink: 0 }} />
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                    Panel Admin — Hanya dapat diakses oleh Admin dan SuperAdmin.
-                    Perubahan di sini bersifat permanen dan tidak dapat diundo.
+                    Panel Admin — Kelola seluruh data Command Center dari sini.
+                    Perubahan bersifat permanen.
                 </span>
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                <button className={`btn ${tab === 'users' ? 'btn-primary' : 'btn-outline'}`}
-                    onClick={() => setTab('users')}>
-                    <UsersIcon size={14} /> Manajemen User
-                </button>
-                <button className={`btn ${tab === 'events' ? 'btn-primary' : 'btn-outline'}`}
-                    onClick={() => setTab('events')}>
-                    <AlertCircle size={14} /> Manajemen Kejadian
-                </button>
+            <div style={{
+                display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap',
+                padding: '4px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)',
+            }}>
+                {TABS.map(({ key, label, icon: Icon }) => (
+                    <button
+                        key={key}
+                        className={`btn ${tab === key ? 'btn-primary' : 'btn-outline'}`}
+                        style={{
+                            padding: '8px 14px', fontSize: '0.78rem',
+                            border: tab === key ? undefined : 'none',
+                            background: tab === key ? undefined : 'transparent',
+                        }}
+                        onClick={() => setTab(key)}
+                    >
+                        <Icon size={14} /> {label}
+                    </button>
+                ))}
             </div>
 
+            {/* Tab Content */}
             {tab === 'users' && <UsersTab />}
             {tab === 'events' && <EventsTab />}
+            {tab === 'operations' && <OperationsTab />}
+            {tab === 'logistics' && <LogisticsTab />}
+            {tab === 'refugees' && <RefugeesTab />}
+            {tab === 'funding' && <FundingTab />}
+            {tab === 'decisions' && <DecisionsTab />}
         </div>
     );
 }

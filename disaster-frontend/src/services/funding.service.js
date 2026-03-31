@@ -6,23 +6,32 @@ import api from '../lib/axios';
 
 export const fundingService = {
     // Summary & charts
-    getSummary: () =>
-        api.get('/funding').then(r => r.data.data),
+    getSummary: (params = {}) =>
+        api.get('/funding', { params }).then(r => r.data.data),
 
     getBurnRate: () =>
         api.get('/funding/burn-rate').then(r => r.data.data),
 
     // Alokasi anggaran
-    getAllocations: () =>
-        api.get('/funding/allocations').then(r => r.data.data),
+    getAllocations: (params = {}) =>
+        api.get('/funding/allocations', { params }).then(r => r.data.data),
 
     createAllocation: (payload) =>
         api.post('/funding/allocations', payload).then(r => r.data.data),
 
+    updateAllocation: (id, payload) =>
+        api.put(`/funding/allocations/${id}`, payload).then(r => r.data.data),
+
+    deleteAllocation: (id) =>
+        api.delete(`/funding/allocations/${id}`).then(r => r.data),
+
     // Pengeluaran harian
-    getExpenditures: () =>
-        api.get('/funding/expenditures').then(r => r.data.data),
+    getExpenditures: (params = {}) =>
+        api.get('/funding/expenditures', { params }).then(r => r.data.data),
 
     createExpenditure: (payload) =>
         api.post('/funding/expenditures', payload).then(r => r.data.data),
+
+    deleteExpenditure: (id) =>
+        api.delete(`/funding/expenditures/${id}`).then(r => r.data),
 };

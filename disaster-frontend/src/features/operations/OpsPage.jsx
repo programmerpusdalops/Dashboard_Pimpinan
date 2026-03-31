@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ListTodo, Loader2, CheckCircle2, Plus, X, Trash2, ClipboardList, RefreshCw } from 'lucide-react';
+import { ListTodo, Loader2, CheckCircle2, Plus, X, Trash2, ClipboardList, RefreshCw, Filter, Clock, ShieldCheck, UserCheck } from 'lucide-react';
 import {
     useTasks, useCreateTask, useUpdateTaskStatus, useDeleteTask,
     useDecisions, useCreateDecision,
 } from './hooks/useTasks';
 import { usePermission } from '../../hooks/usePermission';
+import { useActiveEvents } from '../executive/hooks/useDashboard';
 
 // ── Constants ────────────────────────────────────────────────────
 const COLUMNS = [
@@ -48,8 +49,18 @@ function TaskCard({ task, colKey, canEdit }) {
                     {task.description.substring(0, 80)}{task.description.length > 80 ? '…' : ''}
                 </p>
             )}
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-main)', marginBottom: 8, fontWeight: 500 }}>
+                {task.DisasterEvent ? `📍 ${task.DisasterEvent.title}` : (task.event_id ? `Event ID: ${task.event_id}` : 'UMUM')}
+            </div>
             <div className="k-footer">
-                <span style={{ fontSize: '0.72rem' }}>{task.assigned_to_opd ?? '—'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem' }}>
+                    <span style={{ fontWeight: 600 }}>{task.assigned_to_opd ?? '—'}</span>
+                    {task.estimated_hours && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--text-muted)' }}>
+                            <Clock size={10} /> {task.estimated_hours}j
+                        </span>
+                    )}
+                </div>
                 {canEdit && (
                     <div style={{ display: 'flex', gap: 4 }}>
                         {PREV[colKey] && (
@@ -85,11 +96,13 @@ export default function OpsPage() {
     const [showDecForm, setShowDecForm] = useState(false);
     const [taskForm, setTaskForm] = useState(EMPTY_TASK);
     const [decForm, setDecForm] = useState(EMPTY_DEC);
+    const [filterEventId, setFilterEventId] = useState('');
 
     const { isOperator, isAdmin } = usePermission();
 
-    const { data: tasks = [], isLoading: tLoading, refetch: refetchTasks } = useTasks();
-    const { data: decisions = [], isLoading: dLoading, refetch: refetchDecs } = useDecisions();
+    const { data: activeEvents = [] } = useActiveEvents();
+    const { data: tasks = [], isLoading: tLoading, refetch: refetchTasks } = useTasks(filterEventId ? { event_id: filterEventId } : {});
+    const { data: decisions = [], isLoading: dLoading, refetch: refetchDecs } = useDecisions(filterEventId ? { event_id: filterEventId } : {});
     const createTask = useCreateTask();
     const createDec = useCreateDecision();
 
@@ -115,6 +128,78 @@ export default function OpsPage() {
 
     return (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
+
+            {/* ── Toolbar: Filter ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <Filter size={14} style={{ color: 'var(--text-muted)' }} />
+                <select
+                    className="form-input"
+                    style={{ width: 280, padding: '7px 12px', fontSize: '0.82rem' }}
+                    value={filterEventId}
+                    onChange={e => setFilterEventId(e.target.value)}
+                >
+                    <option value="">Semua Kejadian Aktif</option>
+                    {activeEvents.map(ev => (
+                        <option key={ev.id} value={ev.id}>
+                            {ev.title}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* ── Posko Leader Info ── */}
+            {filterEventId && (() => {
+                const selectedEvent = activeEvents.find(e => String(e.id) === String(filterEventId));
+                if (selectedEvent && selectedEvent.posko_leader) {
+                    return (
+                        <div style={{
+                            position: 'relative', overflow: 'hidden', padding: '16px 20px',
+                            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%)',
+                            borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)', marginBottom: 20,
+                            display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                        }}>
+                            {/* Decorative Icon Background */}
+                            <div style={{
+                                position: 'absolute', right: -15, top: -15, opacity: 0.04,
+                                transform: 'rotate(15deg)', pointerEvents: 'none'
+                            }}>
+                                <ShieldCheck size={120} />
+                            </div>
+                            
+                            {/* Avatar/Initial */}
+                            <div style={{
+                                width: 44, height: 44, borderRadius: '12px',
+                                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--status-blue) 100%)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'white', fontWeight: 800, fontSize: '1.2rem',
+                                boxShadow: '0 4px 10px rgba(37, 99, 235, 0.3)', flexShrink: 0
+                            }}>
+                                {selectedEvent.posko_leader.charAt(0).toUpperCase()}
+                            </div>
+
+                            {/* Info */}
+                            <div style={{ zIndex: 1 }}>
+                                <div style={{ 
+                                    fontSize: '0.72rem', color: 'var(--accent-primary)', textTransform: 'uppercase', 
+                                    letterSpacing: '1px', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6
+                                }}>
+                                    <UserCheck size={14} /> KETUA POSKO OPERASI
+                                </div>
+                                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+                                    {selectedEvent.posko_leader}
+                                </div>
+                                {selectedEvent.posko_leader_position && (
+                                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--status-green)' }}></span>
+                                        {selectedEvent.posko_leader_position}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                }
+                return null;
+            })()}
 
             {/* ── Tab Bar ── */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -290,23 +375,42 @@ export default function OpsPage() {
                                 Belum ada keputusan yang dicatat.
                             </p>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {decisions.map(d => (
-                                    <div key={d.id} style={{
-                                        padding: '12px 14px', background: 'var(--bg-secondary)',
-                                        borderRadius: 'var(--radius-md)', borderLeft: '3px solid var(--accent-primary)',
-                                    }}>
-                                        <div style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', fontWeight: 600, marginBottom: 4 }}>
-                                            {d.decided_by ?? '—'} •{' '}
-                                            {d.decided_at
-                                                ? new Date(d.decided_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-                                                : '—'}
+                            <div style={{ position: 'relative', paddingLeft: 16 }}>
+                                <div style={{ position: 'absolute', top: 0, bottom: 0, left: 24, width: 2, background: 'var(--border-color)' }} />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                    {decisions.map(d => (
+                                        <div key={d.id} style={{ position: 'relative', paddingLeft: 32 }}>
+                                            <div style={{
+                                                position: 'absolute', left: 4, top: 22, width: 10, height: 10,
+                                                borderRadius: '50%', background: 'var(--accent-primary)',
+                                                border: '2px solid var(--bg-card)', zIndex: 2
+                                            }} />
+                                            <div style={{
+                                                padding: '12px 14px', background: 'var(--bg-secondary)',
+                                                borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)',
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '0.76rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                                                            {d.decided_by ?? '—'}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.70rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                                                            {d.DisasterEvent ? `📍 ${d.DisasterEvent.title}` : (d.event_id ? `Event ID: ${d.event_id}` : 'UMUM')}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                        {d.decided_at
+                                                            ? new Date(d.decided_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                                                            : '—'}
+                                                    </div>
+                                                </div>
+                                                <div style={{ fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
+                                                    {d.decision_text}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div style={{ fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
-                                            {d.decision_text}
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

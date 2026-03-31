@@ -1,9 +1,15 @@
 import { useState } from 'react';
-import { Truck, ArrowRight, AlertTriangle, Package, Plus, X, RefreshCw, Warehouse } from 'lucide-react';
+import { Truck, ArrowRight, AlertTriangle, Package, Plus, X, RefreshCw, Warehouse, Wrench, Car } from 'lucide-react';
 import { useWarehouses, useShipments, useCreateShipment, useUpdateShipmentStatus } from './hooks/useLogistics';
 import { usePermission } from '../../hooks/usePermission';
 
 // ── Helpers ──────────────────────────────────────────────────────
+const CATEGORY_STYLE = {
+    logistik: { cls: 'pill-info', label: 'Logistik', icon: Package },
+    peralatan: { cls: 'pill-warn', label: 'Peralatan', icon: Wrench },
+    kendaraan: { cls: 'pill-safe', label: 'Kendaraan', icon: Car },
+};
+
 const coveragePill = (stock, daily) => {
     if (!daily || daily === 0) return 'pill-info';
     const d = stock / daily;
@@ -58,34 +64,48 @@ function WarehouseCard({ wh }) {
             {items.length === 0
                 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Belum ada data inventaris.</p>
                 : (
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Item</th><th>Stok</th><th>Keb./Hr</th><th>Coverage</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {items.map(item => {
-                                const days = item.daily_consumption > 0
-                                    ? (Number(item.stock_quantity) / Number(item.daily_consumption)).toFixed(1)
-                                    : '∞';
-                                return (
-                                    <tr key={item.id}>
-                                        <td style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <Package size={13} /> {item.item_name}
-                                        </td>
-                                        <td>{item.stock_quantity?.toLocaleString('id-ID')} {item.unit}</td>
-                                        <td>{item.daily_consumption} {item.unit}</td>
-                                        <td>
-                                            <span className={`pill ${coveragePill(Number(item.stock_quantity), Number(item.daily_consumption))}`}>
-                                                {days} Hari
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                    <div style={{ overflowX: 'auto', maxHeight: 320, overflowY: 'auto' }}>
+                        <table className="data-table" style={{ minWidth: 480 }}>
+                            <thead>
+                                <tr>
+                                    <th>Item</th><th>Kategori</th><th>Stok</th><th>Keb./Hr</th><th>Coverage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items.map(item => {
+                                    const days = item.daily_consumption > 0
+                                        ? (Number(item.stock_quantity) / Number(item.daily_consumption)).toFixed(1)
+                                        : '∞';
+                                    const cat = CATEGORY_STYLE[item.category] ?? CATEGORY_STYLE.logistik;
+                                    const CatIcon = cat.icon;
+                                    return (
+                                        <tr key={item.id}>
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}>
+                                                    <CatIcon size={13} style={{ flexShrink: 0 }} />
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {item.item_name}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`pill ${cat.cls}`} style={{ fontSize: '0.7rem' }}>
+                                                    {cat.label}
+                                                </span>
+                                            </td>
+                                            <td style={{ whiteSpace: 'nowrap' }}>{item.stock_quantity?.toLocaleString('id-ID')} {item.unit}</td>
+                                            <td style={{ whiteSpace: 'nowrap' }}>{item.daily_consumption} {item.unit}</td>
+                                            <td>
+                                                <span className={`pill ${coveragePill(Number(item.stock_quantity), Number(item.daily_consumption))}`}>
+                                                    {days} Hari
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
         </div>
     );
@@ -185,7 +205,7 @@ export default function LogisticsPage() {
                 </div>
 
                 {whLoading ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', gap: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(420px,1fr))', gap: 16 }}>
                         {[1, 2].map(i => <div key={i} className="skeleton" style={{ height: 200 }} />)}
                     </div>
                 ) : whError ? (
@@ -193,7 +213,7 @@ export default function LogisticsPage() {
                 ) : warehouses.length === 0 ? (
                     <div className="alert alert-info">Belum ada gudang terdaftar.</div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', gap: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(420px,1fr))', gap: 16 }}>
                         {warehouses.map(wh => <WarehouseCard key={wh.id} wh={wh} />)}
                     </div>
                 )}
