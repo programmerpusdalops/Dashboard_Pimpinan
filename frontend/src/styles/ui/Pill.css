@@ -1,0 +1,17 @@
+/* ── Status Pills ────────────────────────────────────────────── */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.pill-safe { background: var(--status-green-bg); color: var(--status-green); }
+.pill-warn { background: var(--status-yellow-bg); color: var(--status-yellow); }
+.pill-critical { background: var(--status-red-bg); color: var(--status-red); }
+.pill-info { background: var(--status-blue-bg); color: var(--status-blue); }

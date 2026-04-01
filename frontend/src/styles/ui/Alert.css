@@ -1,0 +1,35 @@
+/* ── Alert Banners ────────────────────────────────────────────── */
+.alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alert-error {
+    background: var(--status-red-bg);
+    color: var(--status-red);
+    border: 1px solid var(--status-red);
+}
+
+.alert-warning {
+    background: var(--status-yellow-bg);
+    color: var(--status-yellow);
+    border: 1px solid var(--status-yellow);
+}
+
+.alert-info {
+    background: var(--status-blue-bg);
+    color: var(--status-blue);
+    border: 1px solid var(--status-blue);
+}
+
+.alert-success {
+    background: var(--status-green-bg);
+    color: var(--status-green);
+    border: 1px solid var(--status-green);
+}

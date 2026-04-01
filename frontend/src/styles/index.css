@@ -1,0 +1,26 @@
+/* ─────────────────────────────────────────────────────────────
+   Main Entry CSS
+   Modular design for high maintainability.
+   ───────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* Foundation & Design Tokens */
+@import './theme.css';
+@import './base.css';
+@import './animations.css';
+
+/* Atomic UI Components (Global accessibility) */
+@import './ui/Card.css';
+@import './ui/Button.css';
+@import './ui/Table.css';
+@import './ui/Pill.css';
+@import './ui/Alert.css';
+@import './ui/Loading.css';
+@import './ui/Forms.css';
+
+/* Shared Utilities */
+@import './utilities.css';

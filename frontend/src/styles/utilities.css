@@ -1,0 +1,48 @@
+/* ── Utilities ───────────────────────────────────────────────── */
+.text-red { color: var(--status-red) !important; }
+.text-yellow { color: var(--status-yellow) !important; }
+.text-green { color: var(--status-green) !important; }
+.text-blue { color: var(--accent-primary) !important; }
+.text-muted { color: var(--text-muted) !important; }
+
+/* Grid Helpers */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+
+/* Margin/Padding Helpers */
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 8px !important; }
+.mb-2 { margin-bottom: 16px !important; }
+.mb-3 { margin-bottom: 24px !important; }
+
+/* Other */
+.chart-container {
+    height: 260px;
+}
+
+/* Recharts dark-theme overrides */
+.recharts-cartesian-grid line {
+    stroke: var(--border-color) !important;
+}
+
+.recharts-text {
+    fill: var(--text-muted) !important;
+    font-size: 0.7rem !important;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.recharts-default-tooltip .recharts-tooltip-label {
+    color: var(--text-main) !important;
+    font-weight: 600 !important;
+}
+
+.recharts-default-tooltip .recharts-tooltip-item {
+    color: var(--text-secondary) !important;
+}

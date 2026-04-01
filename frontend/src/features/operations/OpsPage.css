@@ -1,0 +1,77 @@
+/* ── Kanban Board ────────────────────────────────────────────── */
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.kanban-column {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    min-height: 300px;
+}
+
+.kanban-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 4px;
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.kanban-header .count {
+    background: var(--bg-card);
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 0.72rem;
+}
+
+.k-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+    cursor: grab;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.k-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.k-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.k-tag.critical { background: var(--status-red-bg); color: var(--status-red); }
+.k-tag.high { background: var(--status-yellow-bg); color: var(--status-yellow); }
+.k-tag.medium { background: var(--status-blue-bg); color: var(--status-blue); }
+.k-tag.low { background: var(--bg-secondary); color: var(--text-muted); }
+
+.k-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
+
+.k-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
