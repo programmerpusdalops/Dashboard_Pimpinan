@@ -12,6 +12,10 @@ import {
   Filter,
   Tv,
   BarChart3,
+  Eye,
+  EyeOff,
+  Minimize2,
+  Maximize2,
 } from "lucide-react";
 import {
   BarChart,
@@ -84,6 +88,15 @@ const rupiah = (v) =>
     maximumFractionDigits: 0,
   });
 
+const formatRupiah = (v, simplify) => {
+  if (!simplify) return rupiah(v);
+  const num = Number(v || 0);
+  if (num >= 1e12) return `Rp ${(num / 1e12).toFixed(2).replace(/\.00$/, "")} Triliun`;
+  if (num >= 1e9)  return `Rp ${(num / 1e9).toFixed(2).replace(/\.00$/, "")} Miliar`;
+  if (num >= 1e6)  return `Rp ${(num / 1e6).toFixed(2).replace(/\.00$/, "")} Juta`;
+  return rupiah(v);
+};
+
 // ── Auto-resize helper — fixes Leaflet rendering bug on container resize ──
 function MapAutoResize() {
   const map = useMap();
@@ -137,6 +150,20 @@ function AutoRefreshBadge() {
 export default function ExecutivePage() {
   // ── Global event filter ──────────────────────────────────────
   const [filterEventId, setFilterEventId] = useState("");
+  const [showFunding, setShowFunding] = useState(() => {
+    return localStorage.getItem("dash_funding_visible") === "true";
+  });
+  const [simplifyFunding, setSimplifyFunding] = useState(() => {
+    return localStorage.getItem("dash_funding_simplify") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("dash_funding_visible", showFunding);
+  }, [showFunding]);
+
+  useEffect(() => {
+    localStorage.setItem("dash_funding_simplify", simplifyFunding);
+  }, [simplifyFunding]);
 
   // ── Data hooks ───────────────────────────────────────────────
   const {
@@ -173,7 +200,7 @@ export default function ExecutivePage() {
           type: "danger",
         },
         {
-          title: "Meninggal / Luka",
+          title: "Korban Jiwa",
           value: `${kpi.totalMeninggal} / ${kpi.totalLuka}`,
           unit: "Jiwa",
           type: "danger",
@@ -185,34 +212,28 @@ export default function ExecutivePage() {
           type: "warning",
         },
         {
-          title: "Rumah Rusak",
-          value: kpi.totalRumahRusak,
-          unit: "Unit",
+          title: "Kerusakan Aset",
+          value: `${kpi.totalRumahRusak} / ${kpi.totalAksesJalanPutus}`,
+          unit: "Rumah / Jalan",
           type: "danger",
         },
+      ]
+    : [];
+
+  const fundingCards = funding
+    ? [
         {
-          title: "Jalan Putus",
-          value: kpi.totalAksesJalanPutus,
-          unit: "Titik",
-          type: "warning",
+          title: "Total Anggaran",
+          value: showFunding ? formatRupiah(funding.totalAllocated, simplifyFunding) : "Rp ••••••••",
+          unit: "",
+          type: "info",
         },
-        // Funding cards
-        ...(funding
-          ? [
-              {
-                title: "Total Anggaran",
-                value: rupiah(funding.totalAllocated),
-                unit: "",
-                type: "info",
-              },
-              {
-                title: "Sisa Dana",
-                value: rupiah(funding.remaining),
-                unit: `${funding.burnPct}% terpakai`,
-                type: funding.remaining > 0 ? "success" : "danger",
-              },
-            ]
-          : []),
+        {
+          title: "Sisa Dana",
+          value: showFunding ? formatRupiah(funding.remaining, simplifyFunding) : "Rp ••••••••",
+          unit: showFunding ? `${funding.burnPct}% terpakai` : "••••",
+          type: funding.remaining > 0 ? "success" : "danger",
+        },
       ]
     : [];
 
@@ -303,16 +324,37 @@ export default function ExecutivePage() {
           {kpiCards.map((k, i) => (
             <div key={i} className={`kpi-card ${k.type}`}>
               <div className="kpi-title">{k.title}</div>
-              <div
-                className="kpi-value"
-                style={{
-                  fontSize:
-                    k.title.includes("Anggaran") || k.title.includes("Sisa")
-                      ? "1.05rem"
-                      : undefined,
-                }}
-              >
+              <div className="kpi-value">
                 {k.value} {k.unit && <span className="kpi-unit">{k.unit}</span>}
+              </div>
+            </div>
+          ))}
+          
+          {fundingCards.map((k, i) => (
+            <div key={`f-${i}`} className={`kpi-card ${k.type} span-2 compact`}>
+              <div className="kpi-title">
+                {k.title}
+                {i === 0 && (
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button 
+                      onClick={() => setSimplifyFunding(!simplifyFunding)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}
+                      title={simplifyFunding ? "Tampilkan Nilai Penuh" : "Sederhanakan Nilai (Juta/Miliar)"}
+                    >
+                      {simplifyFunding ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                    </button>
+                    <button 
+                      onClick={() => setShowFunding(!showFunding)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}
+                      title={showFunding ? "Sembunyikan Nilai" : "Tampilkan Nilai"}
+                    >
+                      {showFunding ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="kpi-value">
+                {k.value} {k.unit && <span className="kpi-unit" style={{ marginLeft: 8 }}>{k.unit}</span>}
               </div>
             </div>
           ))}
@@ -627,7 +669,7 @@ export default function ExecutivePage() {
                   color: "var(--status-blue)",
                 }}
               >
-                {rupiah(funding.totalAllocated)}
+                {formatRupiah(funding.totalAllocated, simplifyFunding)}
               </div>
             </div>
             <div>
@@ -650,7 +692,7 @@ export default function ExecutivePage() {
                   color: "var(--status-red)",
                 }}
               >
-                {rupiah(funding.totalSpent)}
+                {formatRupiah(funding.totalSpent, simplifyFunding)}
               </div>
             </div>
             <div>
@@ -676,7 +718,7 @@ export default function ExecutivePage() {
                       : "var(--status-red)",
                 }}
               >
-                {rupiah(funding.remaining)}
+                {formatRupiah(funding.remaining, simplifyFunding)}
               </div>
             </div>
           </div>

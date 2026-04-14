@@ -75,7 +75,14 @@ export function useFundingSummary(eventId) {
             // the backend handles it or we approximate it. 
             // Wait, our backend /funding route already returns the perfectly aggregated data!
             // Let's use fundingService.getSummary(eventId) instead!
-            return await fundingService.getSummary(eventId);
+            const summary = await fundingService.getSummary(eventId);
+            return {
+                totalAllocated: summary.totalPagu,
+                totalSpent: summary.totalRealisasi,
+                remaining: summary.sisaSaldo,
+                burnPct: summary.persenRealisasi,
+                ...summary
+            };
         },
         staleTime: 1000 * 60 * 2,
         refetchInterval: REFETCH_INTERVAL,

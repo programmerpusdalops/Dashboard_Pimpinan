@@ -31,7 +31,7 @@ app.use(helmet());
 
 // CORS
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: process.env.CLIENT_URL || 'http://localhost:5180',
     credentials: true,
 }));
 
@@ -43,7 +43,7 @@ const limiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 });
-app.use('/api', limiter);
+// app.use('/api', limiter); // Disabled rate limiting
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
