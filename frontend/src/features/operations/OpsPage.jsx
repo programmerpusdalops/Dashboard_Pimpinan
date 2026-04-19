@@ -8,6 +8,8 @@ import {
 } from './hooks/useTasks';
 import { usePermission } from '../../hooks/usePermission';
 import { useActiveEvents } from '../executive/hooks/useDashboard';
+import { useComponentsByNavKey } from '../../features/app-settings/hooks/useAppSettings';
+import AlertBanner from '../../components/common/AlertBanner';
 
 // ── Constants ────────────────────────────────────────────────────
 const COLUMNS = [
@@ -102,6 +104,15 @@ export default function OpsPage() {
 
     const { isOperator, isAdmin } = usePermission();
 
+    // ── Component Visibility Config ──────────────────────────────
+    const { data: compConfigs = [] } = useComponentsByNavKey('ops');
+    
+    const isVisible = (key) => {
+        if (compConfigs.length === 0) return true; // Default tampil
+        const comp = compConfigs.find(c => c.component_key === key);
+        return comp ? comp.is_visible : true;
+    };
+
     const { data: activeEvents = [] } = useActiveEvents();
     const { data: tasks = [], isLoading: tLoading, refetch: refetchTasks } = useTasks(filterEventId ? { event_id: filterEventId } : {});
     const { data: decisions = [], isLoading: dLoading, refetch: refetchDecs } = useDecisions(filterEventId ? { event_id: filterEventId } : {});
@@ -130,7 +141,11 @@ export default function OpsPage() {
 
     return (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
-
+            {compConfigs.some(c => !c.is_visible) && (
+                <AlertBanner icon={ShieldCheck} title="Kontrol Terbatas" color="#f59e0b" background="rgba(245, 158, 11, 0.08)" borderColor="rgba(245, 158, 11, 0.2)">
+                    Beberapa fitur operasional mungkin dibatasi oleh kebijakan pusat pimpinan.
+                </AlertBanner>
+            )}
             {/* ── Toolbar: Filter ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                 <Filter size={14} style={{ color: 'var(--text-muted)' }} />
@@ -150,7 +165,7 @@ export default function OpsPage() {
             </div>
 
             {/* ── Posko Leader Info ── */}
-            {filterEventId && (() => {
+            {filterEventId && isVisible('posko_info') && (() => {
                 const selectedEvent = activeEvents.find(e => String(e.id) === String(filterEventId));
                 if (selectedEvent && selectedEvent.posko_leader) {
                     return (
@@ -205,20 +220,24 @@ export default function OpsPage() {
 
             {/* ── Tab Bar ── */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {isVisible('kanban_board') && (
                 <button
                     className={`btn ${activeTab === 'kanban' ? 'btn-primary' : 'btn-outline'}`}
                     onClick={() => setActiveTab('kanban')}>
                     <ListTodo size={14} /> Kanban Tasks
                 </button>
+                )}
+                {isVisible('decision_timeline') && (
                 <button
                     className={`btn ${activeTab === 'decisions' ? 'btn-primary' : 'btn-outline'}`}
                     onClick={() => setActiveTab('decisions')}>
                     <ClipboardList size={14} /> Log Keputusan
                 </button>
+                )}
             </div>
 
             {/* ── Kanban Board ── */}
-            {activeTab === 'kanban' && (
+            {activeTab === 'kanban' && isVisible('kanban_board') && (
                 <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                         <div style={{ display: 'flex', gap: 10, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -234,7 +253,7 @@ export default function OpsPage() {
                                 onClick={refetchTasks}>
                                 <RefreshCw size={12} />
                             </button>
-                            {isOperator && (
+                            {isOperator && isVisible('task_form') && (
                                 <button
                                     className={`btn ${showTaskForm ? 'btn-outline' : 'btn-primary'}`}
                                     style={{ padding: '6px 12px', fontSize: '0.78rem' }}
@@ -247,7 +266,7 @@ export default function OpsPage() {
                     </div>
 
                     {/* Task Form */}
-                    {showTaskForm && (
+                    {showTaskForm && isVisible('task_form') && (
                         <div className="card mb-2" style={{ borderLeft: '3px solid var(--accent-primary)' }}>
                             <form onSubmit={handleCreateTask}
                                 style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 10 }}>
@@ -320,7 +339,7 @@ export default function OpsPage() {
             )}
 
             {/* ── Decision Log ── */}
-            {activeTab === 'decisions' && (
+            {activeTab === 'decisions' && isVisible('decision_timeline') && (
                 <>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
                         {isAdmin && (

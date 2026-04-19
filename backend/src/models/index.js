@@ -14,6 +14,10 @@ const DecisionLog = require('./DecisionLog');
 const BudgetAllocation = require('./BudgetAllocation');
 const DailyExpenditure = require('./DailyExpenditure');
 const Instruction = require('./Instruction');
+const NavAccessConfig = require('./NavAccessConfig');
+const ComponentVisibilityConfig = require('./ComponentVisibilityConfig');
+const NotificationDotConfig = require('./NotificationDotConfig');
+const Notification = require('./Notification');
 
 // ── DisasterEvent associations ──────────────────────────────
 DisasterEvent.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
@@ -65,6 +69,11 @@ DailyExpenditure.belongsTo(User, { foreignKey: 'verified_by', as: 'verifier' });
 Instruction.belongsTo(User, { foreignKey: 'from_user_id', as: 'sender' });
 Instruction.belongsTo(User, { foreignKey: 'responded_by', as: 'responder' });
 
+// ── App Settings associations ──────────────────────────────
+NavAccessConfig.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+ComponentVisibilityConfig.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+NotificationDotConfig.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+
 module.exports = {
     sequelize,
     User, DisasterEvent, Casualty,
@@ -73,4 +82,8 @@ module.exports = {
     OperationTask, DecisionLog,
     BudgetAllocation, DailyExpenditure,
     Instruction,
+    NavAccessConfig,
+    ComponentVisibilityConfig,
+    NotificationDotConfig,
+    Notification,
 };

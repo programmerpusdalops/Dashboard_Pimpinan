@@ -75,7 +75,7 @@ function CreateInstructionForm({ onClose }) {
 }
 
 // ── Card Instruksi ───────────────────────────────────────────────
-export function InstructionCard({ inst, canRespond, compact = false }) {
+export function InstructionCard({ inst, canRespond }) {
     const [showRespond, setShowRespond] = useState(false);
     const [responseText, setResponseText] = useState('');
     const updateStatus = useUpdateInstructionStatus();

@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
 import './Topbar.css';
 
-import { LogOut, Sun, Moon } from 'lucide-react';
-import useAuthStore from '../../store/authStore';
+import { Sun, Moon } from 'lucide-react';
 import useThemeStore from '../../store/useThemeStore';
-import { useNavigate } from 'react-router-dom';
 
 export default function Topbar({ title }) {
     const [time, setTime] = useState('');
-    const { user, logout } = useAuthStore();
     const { theme, toggleTheme } = useThemeStore();
-    const navigate = useNavigate();
 
     useEffect(() => {
         const updateTime = () => {
@@ -27,11 +23,6 @@ export default function Topbar({ title }) {
         return () => clearInterval(id);
     }, []);
 
-    const handleLogout = async () => {
-        await logout();
-        navigate('/login');
-    };
-
     const isDark = theme === 'dark';
 
     return (
@@ -40,6 +31,10 @@ export default function Topbar({ title }) {
             <div className="topbar-actions">
                 <div className="time-display">{time}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="topbar-status">
+                        <span className="status-dot" />
+                        <span>STATUS: SIAGA</span>
+                    </div>
                     {/* Theme Toggle */}
                     <button
                         onClick={toggleTheme}
@@ -69,18 +64,6 @@ export default function Topbar({ title }) {
                         }}>
                             <Moon size={15} />
                         </span>
-                    </button>
-
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {user?.name}
-                    </span>
-                    <button
-                        onClick={handleLogout}
-                        className="btn btn-outline"
-                        style={{ padding: '6px 10px' }}
-                        title="Logout"
-                    >
-                        <LogOut size={15} />
                     </button>
                 </div>
             </div>

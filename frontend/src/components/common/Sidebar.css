@@ -14,16 +14,13 @@
 }
 
 .sidebar-logo {
-    padding: 20px 18px;
+    position: relative;
+    padding: 18px 14px 14px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-logo .logo-icon {
-    color: var(--accent-primary);
-    flex-shrink: 0;
 }
 
 .sidebar-logo h1 {
@@ -34,13 +31,57 @@
     white-space: nowrap;
 }
 
+.sidebar-logo-text {
+    text-align: center;
+}
+
+.sidebar-logo-sub {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.sidebar-collapse-toggle {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.sidebar-collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-main);
+    border-color: var(--border-color-hover);
+}
+
 .sidebar nav {
     flex: 1;
     padding: 12px 8px;
     overflow-y: auto;
 }
 
+.sidebar-system-link {
+    margin: 0 12px 12px;
+}
+
+.sidebar.collapsed .sidebar-system-link {
+    margin: 0 10px 12px;
+}
+
 .nav-link {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -52,6 +93,12 @@
     transition: all var(--transition-fast);
     margin-bottom: 2px;
     white-space: nowrap;
+}
+
+.nav-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .nav-link:hover {
@@ -72,6 +119,122 @@
 .sidebar-footer {
     padding: 14px 18px;
     border-top: 1px solid var(--border-color);
+}
+
+.sidebar-unread-dot {
+    background: var(--status-blue);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-left: auto;
+}
+
+.sidebar.collapsed .sidebar-logo-text {
+    display: none;
+}
+
+.sidebar.collapsed nav {
+    padding: 12px 10px;
+}
+
+.sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: 12px 10px;
+    gap: 0;
+    margin-bottom: 6px;
+}
+
+.sidebar.collapsed .sidebar-system-link {
+    margin: 0 10px 12px;
+}
+
+.sidebar.collapsed .nav-label {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-account {
+    justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-account-info {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-unread-dot {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    margin-left: 0;
+}
+
+/* Tooltip (collapsed only) */
+.sidebar.collapsed .nav-link[data-tooltip]::after,
+.sidebar.collapsed .nav-link[data-tooltip]::before {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast);
+}
+
+.sidebar.collapsed .nav-link[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: var(--shadow-md);
+    z-index: 999;
+    opacity: 1;
+}
+
+.sidebar.collapsed .nav-link[data-tooltip]:hover::before {
+    content: '';
+    position: absolute;
+    left: calc(100% + 4px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-right: 6px solid var(--bg-card);
+    opacity: 1;
+}
+
+.sidebar-account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sidebar-account-info {
+    min-width: 0;
+}
+
+.sidebar-account-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 165px;
+}
+
+.sidebar-account-role {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin-top: 2px;
 }
 
 .alert-status {

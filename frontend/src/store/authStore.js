@@ -20,7 +20,7 @@ const useAuthStore = create((set, get) => ({
         try {
             // Beritahu backend agar invalidasi refresh token di DB
             await api.post('/auth/logout');
-        } catch (_) {
+        } catch {
             // Tetap lanjut logout lokal meski API gagal (ex: token sudah expired)
         } finally {
             localStorage.removeItem('user');

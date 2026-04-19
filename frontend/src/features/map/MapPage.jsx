@@ -12,6 +12,9 @@ import {
 import { dashboardService } from '../../services/dashboard.service';
 import { useShelters } from '../refugees/hooks/useRefugees';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useComponentsByNavKey } from '../../features/app-settings/hooks/useAppSettings';
+import AlertBanner from '../../components/common/AlertBanner';
+import { ShieldAlert } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────
 // Constants
@@ -373,6 +376,15 @@ export default function MapPage() {
     });
     const { data: shelters = [] } = useShelters();
 
+    // ── Component Visibility Config ──────────────────────────────
+    const { data: compConfigs = [] } = useComponentsByNavKey('map');
+    
+    const isVisible = (key) => {
+        if (compConfigs.length === 0) return true; // Default tampil
+        const comp = compConfigs.find(c => c.component_key === key);
+        return comp ? comp.is_visible : true;
+    };
+
     // Normalize all features to a unified list
     const allFeatures = useMemo(() => {
         const result = [];
@@ -450,9 +462,15 @@ export default function MapPage() {
 
     return (
         <div style={{ position: 'relative', height: 'calc(100vh - 84px)', overflow: 'hidden', margin: '0', background: 'var(--bg-primary)' }}>
-
+            {compConfigs.some(c => !c.is_visible) && (
+                <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: 'fit-content', minWidth: 400 }}>
+                    <AlertBanner icon={ShieldAlert} title="Proteksi Navigasi" color="#f59e0b" background="rgba(24, 24, 27, 0.9)" borderColor="rgba(245, 158, 11, 0.3)">
+                        Beberapa kontrol peta dibatasi untuk profil Anda.
+                    </AlertBanner>
+                </div>
+            )}
             {/* ── MAP ─────────────────────────────────────────────── */}
-            <div style={{ position: 'absolute', inset: 0, right: sidebarOpen ? SIDEBAR_W : 0, transition: 'right 0.3s ease' }}>
+            <div style={{ position: 'absolute', inset: 0, right: isVisible('map_sidebar') && sidebarOpen ? SIDEBAR_W : 0, transition: 'right 0.3s ease' }}>
                 {geoLoading && (
                     <div style={{
                         position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
@@ -506,7 +524,7 @@ export default function MapPage() {
                 </MapContainer>
 
                 {/* ── Legend ── */}
-                <Legend showShelter={activeLayer !== 'event'} />
+                {isVisible('map_legend') && <Legend showShelter={activeLayer !== 'event'} />}
 
                 {/* ── Map controls (top-left) ── */}
                 <div style={{
@@ -592,6 +610,7 @@ export default function MapPage() {
                 </button>
 
                 {/* ── Stats bar (bottom center) ── */}
+                {isVisible('map_stats_bar') && (
                 <div style={{
                     position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
                     zIndex: 800, display: 'flex', gap: 1,
@@ -607,9 +626,11 @@ export default function MapPage() {
                     <div style={{ width: 1, background: 'var(--map-border)', margin: '0 1px' }} />
                     <StatChip icon={<Users size={11} />} value={stats.totalPengungsi.toLocaleString('id-ID')} label="Pengungsi" color="#10b981" />
                 </div>
+                )}
             </div>
 
             {/* ── SIDEBAR ─────────────────────────────────────────── */}
+            {isVisible('map_sidebar') && (
             <div style={{
                 position: 'absolute', top: 0, right: 0, bottom: 0,
                 width: SIDEBAR_W,
@@ -707,8 +728,8 @@ export default function MapPage() {
                     )}
                 </div>
 
-
             </div>
+            )}
         </div>
     );
 }

@@ -81,6 +81,11 @@
   --map-bar-track: rgba(255, 255, 255, 0.08);
 }
 
+/* Sidebar collapsed (driven by Sidebar.jsx) */
+:root[data-sidebar="collapsed"] {
+  --sidebar-width: var(--sidebar-collapsed);
+}
+
 /* ── LIGHT MODE — Warm Orange Theme ───────────────────────── */
 [data-theme="light"] {
   /* Background layers */

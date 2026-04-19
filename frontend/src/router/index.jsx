@@ -9,6 +9,7 @@ import RefugeesPage from '../features/refugees/RefugeesPage';
 import FundingPage from '../features/funding/FundingPage';
 import AdminPage from '../features/admin/AdminPage';
 import InstructionLogPage from '../features/instructions/InstructionLogPage';
+import AppSettingsPage from '../features/app-settings/AppSettingsPage';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 
 const router = createBrowserRouter([
@@ -25,8 +26,10 @@ const router = createBrowserRouter([
             { path: 'funding', element: <FundingPage /> },
             { path: 'admin', element: <AdminPage /> },
             { path: 'instruksi', element: <InstructionLogPage /> },
+            { path: 'app-settings', element: <AppSettingsPage /> },
         ],
     },
 ]);
 
 export default router;
+

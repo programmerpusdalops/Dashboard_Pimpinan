@@ -194,7 +194,6 @@ export default function RefugeesTab() {
     const [healthShelter, setHealthShelter] = useState(null); // shelter object for health report
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
-    const qc = useQueryClient();
     const debouncedSearch = useDebounce(search, 400);
 
     const { data: shelters = [], isLoading, refetch } = useQuery({

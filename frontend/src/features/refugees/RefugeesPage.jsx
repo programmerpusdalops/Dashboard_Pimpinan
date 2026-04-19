@@ -8,6 +8,9 @@ import {
     useShelters, useRefugeesSummary, useCreateShelter,
 } from './hooks/useRefugees';
 import { usePermission } from '../../hooks/usePermission';
+import { useComponentsByNavKey } from '../../features/app-settings/hooks/useAppSettings';
+import AlertBanner from '../../components/common/AlertBanner';
+import { ShieldAlert } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────
 const PIE_COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'];
@@ -21,14 +24,6 @@ const TOOLTIP_STYLE = {
     },
 };
 
-const occupancyPill = (cur, cap) => {
-    if (!cap) return 'pill-info';
-    const pct = cur / cap;
-    if (pct >= 1) return 'pill-critical';
-    if (pct >= 0.85) return 'pill-warn';
-    return 'pill-safe';
-};
-
 const EMPTY_FORM = { name: '', location_name: '', capacity: '', pic_name: '', latitude: '', longitude: '' };
 
 // ── Main Page ────────────────────────────────────────────────────
@@ -36,6 +31,15 @@ export default function RefugeesPage() {
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState(EMPTY_FORM);
     const { isOperator } = usePermission();
+
+    // ── Component Visibility Config ──────────────────────────────
+    const { data: compConfigs = [] } = useComponentsByNavKey('refugees');
+    
+    const isVisible = (key) => {
+        if (compConfigs.length === 0) return true; // Default tampil
+        const comp = compConfigs.find(c => c.component_key === key);
+        return comp ? comp.is_visible : true;
+    };
 
     const { data: summary, isLoading: sumLoading } = useRefugeesSummary();
     const { data: shelters = [], isLoading: shelterLoading, isError: shelterError } = useShelters();
@@ -64,8 +68,13 @@ export default function RefugeesPage() {
 
     return (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
-
+            {compConfigs.some(c => !c.is_visible) && (
+                <AlertBanner icon={ShieldAlert} title="Layanan Terbatas" color="#f59e0b" background="rgba(245, 158, 11, 0.08)" borderColor="rgba(245, 158, 11, 0.2)">
+                    Beberapa manajemen modul data pengungsi mungkin telah dibatasi oleh administrator.
+                </AlertBanner>
+            )}
             {/* ── KPI Summary ── */}
+            {isVisible('refugees_kpi') && (
             <div className="kpi-grid" style={{ marginBottom: 20 }}>
                 <div className="kpi-card warning">
                     <div className="kpi-title"><Users size={13} /> Total Pengungsi</div>
@@ -96,8 +105,10 @@ export default function RefugeesPage() {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* ── Charts Row ── */}
+            {isVisible('refugees_charts') && (
             <div className="grid-2" style={{ marginBottom: 20 }}>
                 {/* Bar chart */}
                 <div className="card">
@@ -110,7 +121,7 @@ export default function RefugeesPage() {
                         ) : barData.length === 0 ? (
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Data kosong.</p>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                 <BarChart data={barData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                     <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} />
                                     <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
@@ -133,7 +144,7 @@ export default function RefugeesPage() {
                         ) : pieData.length === 0 ? (
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Data kosong.</p>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                 <PieChart>
                                     <Pie data={pieData} cx="50%" cy="50%"
                                         innerRadius={55} outerRadius={85}
@@ -150,8 +161,10 @@ export default function RefugeesPage() {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* ── Shelter Table ── */}
+            {isVisible('shelter_table') && (
             <div className="card">
                 <div className="card-header">
                     <div className="card-title"><Tent size={15} /> DAFTAR POSKO PENGUNGSIAN</div>
@@ -259,6 +272,7 @@ export default function RefugeesPage() {
                     </table>
                 )}
             </div>
+            )}
         </div>
     );
 }

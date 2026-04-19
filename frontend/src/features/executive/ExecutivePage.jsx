@@ -40,6 +40,9 @@ import {
 } from "./hooks/useDashboard";
 import queryClient from "../../lib/queryClient";
 import { dashboardKeys } from "./hooks/useDashboard";
+import { useComponentsByNavKey } from "../../features/app-settings/hooks/useAppSettings";
+import AlertBanner from "../../components/common/AlertBanner";
+import { ShieldAlert } from "lucide-react";
 
 // ── Custom map marker icon ───────────────────────────────────────
 const makeMarkerIcon = (color, isCritical = false) =>
@@ -185,6 +188,15 @@ export default function ExecutivePage() {
   );
   const { data: activeEvents = [] } = useActiveEvents();
 
+  // ── Component Visibility Config ──────────────────────────────
+  const { data: compConfigs = [] } = useComponentsByNavKey('dashboard');
+  
+  const isVisible = (key) => {
+    if (compConfigs.length === 0) return true; // Default tampil
+    const comp = compConfigs.find(c => c.component_key === key);
+    return comp ? comp.is_visible : true;
+  };
+
   // ── Map features (filtered by API) ───────────────────────────
   const mapFeatures = useMemo(() => {
     return geoJson?.features ?? [];
@@ -263,6 +275,11 @@ export default function ExecutivePage() {
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
+      {compConfigs.some(c => !c.is_visible) && (
+        <AlertBanner icon={ShieldAlert} title="Akses Terbatas" color="#f59e0b" background="rgba(245, 158, 11, 0.08)" borderColor="rgba(245, 158, 11, 0.2)">
+          Beberapa modul pada halaman ini sedang disembunyikan oleh administrator sistem.
+        </AlertBanner>
+      )}
       {/* ── Toolbar: Filter + Refresh ─────────────────────────── */}
       <div
         style={{
@@ -313,122 +330,113 @@ export default function ExecutivePage() {
       </div>
 
       {/* ── KPI Grid ─────────────────────────────────────────── */}
-      {kpiLoading || fundLoading ? (
-        <KpiSkeleton />
-      ) : kpiError ? (
-        <div className="alert alert-error">
-          Gagal memuat data KPI. Periksa koneksi ke server.
-        </div>
-      ) : (
-        <div className="kpi-grid">
-          {kpiCards.map((k, i) => (
-            <div key={i} className={`kpi-card ${k.type}`}>
-              <div className="kpi-title">{k.title}</div>
-              <div className="kpi-value">
-                {k.value} {k.unit && <span className="kpi-unit">{k.unit}</span>}
+      {isVisible('kpi_cards') && (
+        kpiLoading || fundLoading ? (
+          <KpiSkeleton />
+        ) : kpiError ? (
+          <div className="alert alert-error">
+            Gagal memuat data KPI. Periksa koneksi ke server.
+          </div>
+        ) : (
+          <div className="kpi-grid">
+            {kpiCards.map((k, i) => (
+              <div key={i} className={`kpi-card ${k.type}`}>
+                <div className="kpi-title">{k.title}</div>
+                <div className="kpi-value">
+                  {k.value} {k.unit && <span className="kpi-unit">{k.unit}</span>}
+                </div>
               </div>
-            </div>
-          ))}
-          
-          {fundingCards.map((k, i) => (
-            <div key={`f-${i}`} className={`kpi-card ${k.type} span-2 compact`}>
-              <div className="kpi-title">
-                {k.title}
-                {i === 0 && (
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button 
-                      onClick={() => setSimplifyFunding(!simplifyFunding)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}
-                      title={simplifyFunding ? "Tampilkan Nilai Penuh" : "Sederhanakan Nilai (Juta/Miliar)"}
-                    >
-                      {simplifyFunding ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
-                    </button>
-                    <button 
-                      onClick={() => setShowFunding(!showFunding)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}
-                      title={showFunding ? "Sembunyikan Nilai" : "Tampilkan Nilai"}
-                    >
-                      {showFunding ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
-                )}
+            ))}
+            
+            {fundingCards.map((k, i) => (
+              <div key={`f-${i}`} className={`kpi-card ${k.type} span-2 compact`}>
+                <div className="kpi-title">
+                  {k.title}
+                  {i === 0 && (
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button 
+                        onClick={() => setSimplifyFunding(!simplifyFunding)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}
+                        title={simplifyFunding ? "Tampilkan Nilai Penuh" : "Sederhanakan Nilai (Juta/Miliar)"}
+                      >
+                        {simplifyFunding ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                      </button>
+                      <button 
+                        onClick={() => setShowFunding(!showFunding)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}
+                        title={showFunding ? "Sembunyikan Nilai" : "Tampilkan Nilai"}
+                      >
+                        {showFunding ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="kpi-value">
+                  {k.value} {k.unit && <span className="kpi-unit" style={{ marginLeft: 8 }}>{k.unit}</span>}
+                </div>
               </div>
-              <div className="kpi-value">
-                {k.value} {k.unit && <span className="kpi-unit" style={{ marginLeft: 8 }}>{k.unit}</span>}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* ── Map + Side Panels ───────────────────────────────── */}
-      <div
-        className="map-dashboard grid-2-1 max-h-[1000px] "
-        style={{ marginBottom: 16, alignItems: "stretch" }}
-      >
-        {/* Peta */}
+      {(isVisible('mini_map') || isVisible('top_priorities') || isVisible('decision_log')) && (
         <div
-          className="card "
-          style={{ display: "flex", flexDirection: "column" }}
+          className={`map-dashboard ${isVisible('mini_map') ? 'grid-2-1' : 'flex flex-col'} max-h-[1000px] `}
+          style={{ marginBottom: 16, alignItems: "stretch" }}
         >
-          <div className="card-header mb-0">
-            <div className="card-title">
-              <MapPin size={15} /> PETA SEBARAN KEJADIAN
+          {/* Peta */}
+          {isVisible('mini_map') && (
+            <div className="card " style={{ display: "flex", flexDirection: "column" }}>
+              <div className="card-header mb-0">
+                <div className="card-title">
+                  <MapPin size={15} /> PETA SEBARAN KEJADIAN
+                </div>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                  {mapFeatures.length} titik
+                </span>
+              </div>
+              <div className="map-wrapper" style={{ marginTop: 10, flex: 1, minHeight: 300 }}>
+                {!mapLoading && (
+                  <MapContainer
+                    center={[-1.5, 121]}
+                    zoom={7}
+                    style={{ height: "100%", width: "100%" }}
+                    zoomControl={false}
+                    attributionControl={false}
+                  >
+                    <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+                    <MapAutoResize />
+                    {mapFeatures.map((f, i) => {
+                      const [lng, lat] = f.geometry.coordinates;
+                      const isEvent = f.properties.layerType === "event";
+                      const isCritical = isEvent && f.properties.severity === "kritis";
+                      const color = isEvent ? (SEVERITY_COLOR[f.properties.severity] ?? "#f59e0b") : "#3b82f6";
+                      return (
+                        <Marker key={i} position={[lat, lng]} icon={makeMarkerIcon(color, isCritical)}>
+                          <Popup>
+                            <strong>{f.properties.title ?? f.properties.name}</strong>
+                            <br />
+                            {isEvent
+                              ? `Tipe: ${EVENT_TYPE_LABEL[f.properties.type] ?? f.properties.type} | Severity: ${f.properties.severity} | Status: ${f.properties.status}`
+                              : `Kapasitas: ${f.properties.occupancy ?? 0} / ${f.properties.capacity ?? 0}`}
+                          </Popup>
+                        </Marker>
+                      );
+                    })}
+                  </MapContainer>
+                )}
+              </div>
             </div>
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-              {mapFeatures.length} titik
-            </span>
-          </div>
-          <div
-            className="map-wrapper"
-            style={{ marginTop: 10, flex: 1, minHeight: 300 }}
-          >
-            {!mapLoading && (
-              <MapContainer
-                center={[-1.5, 121]}
-                zoom={7}
-                style={{ height: "100%", width: "100%" }}
-                zoomControl={false}
-                attributionControl={false}
-              >
-                <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
-                <MapAutoResize />
-                {mapFeatures.map((f, i) => {
-                  const [lng, lat] = f.geometry.coordinates;
-                  const isEvent = f.properties.layerType === "event";
-                  const isCritical =
-                    isEvent && f.properties.severity === "kritis";
-                  const color = isEvent
-                    ? (SEVERITY_COLOR[f.properties.severity] ?? "#f59e0b")
-                    : "#3b82f6";
-                  return (
-                    <Marker
-                      key={i}
-                      position={[lat, lng]}
-                      icon={makeMarkerIcon(color, isCritical)}
-                    >
-                      <Popup>
-                        <strong>
-                          {f.properties.title ?? f.properties.name}
-                        </strong>
-                        <br />
-                        {isEvent
-                          ? `Tipe: ${EVENT_TYPE_LABEL[f.properties.type] ?? f.properties.type} | Severity: ${f.properties.severity} | Status: ${f.properties.status}`
-                          : `Kapasitas: ${f.properties.occupancy ?? 0} / ${f.properties.capacity ?? 0}`}
-                      </Popup>
-                    </Marker>
-                  );
-                })}
-              </MapContainer>
-            )}
-          </div>
-        </div>
+          )}
 
-        {/* Side panels */}
-        <div className="flex flex-col gap-4 dashboard-side-panel h-[750px]">
-          {/* --- TOP PRIORITAS --- */}
-          {/* Tambah: flex flex-col min-h-0 agar card membagi tinggi rata & tidak melar */}
-          <div className="card flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Side panels */}
+          {(isVisible('top_priorities') || isVisible('decision_log')) && (
+            <div className="flex flex-col gap-4 dashboard-side-panel h-[750px]">
+              {/* --- TOP PRIORITAS --- */}
+              {isVisible('top_priorities') && (
+                <div className="card flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="card-header">
               <div className="card-title text-red">
                 <AlertTriangle size={15} /> TOP PRIORITAS
@@ -479,9 +487,11 @@ export default function ExecutivePage() {
               )}
             </div>
           </div>
+          )}
 
           {/* --- LOG KEPUTUSAN --- */}
           {/* Tambah: flex flex-col min-h-0 */}
+          {isVisible('decision_log') && (
           <div className="card flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="card-header">
               <div className="card-title text-blue">
@@ -533,10 +543,14 @@ export default function ExecutivePage() {
               )}
             </div>
           </div>
+          )}
         </div>
+        )}
       </div>
+      )}
 
       {/* ── Charts Row ──────────────────────────────────────── */}
+      {isVisible('charts') && (
       <div className="grid-2" style={{ marginBottom: 16 }}>
         {/* Bar Chart: Kejadian per Tipe */}
         <div className="card">
@@ -557,7 +571,7 @@ export default function ExecutivePage() {
                 Belum ada data kejadian aktif.
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart
                   data={eventsByType}
                   margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
@@ -599,7 +613,7 @@ export default function ExecutivePage() {
                 Belum ada data.
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
                   <Pie
                     data={severityDist}
@@ -629,9 +643,10 @@ export default function ExecutivePage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── Funding Progress Bar (below charts) ─────────────── */}
-      {funding && funding.totalAllocated > 0 && (
+      {isVisible('budget_progress') && funding && funding.totalAllocated > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
             <div className="card-title">

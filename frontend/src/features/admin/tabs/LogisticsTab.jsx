@@ -620,13 +620,12 @@ export default function LogisticsTab() {
                                         <th>Supir</th><th>Muatan</th><th>Status</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {filteredShip.map(s => {
-                                        const ss = SHIP_STATUS[s.status] ?? SHIP_STATUS.preparing;
-                                        const fromName = warehouses.find(w => w.id === s.from_warehouse_id)?.name ?? '—';
-                                        const toName = shelters.find(sh => sh.id === s.to_shelter_id)?.name ?? '—';
-                                        return (
-                                            <tr key={s.id}>
+                                    <tbody>
+                                        {filteredShip.map(s => {
+                                            const fromName = warehouses.find(w => w.id === s.from_warehouse_id)?.name ?? '—';
+                                            const toName = shelters.find(sh => sh.id === s.to_shelter_id)?.name ?? '—';
+                                            return (
+                                                <tr key={s.id}>
                                                 <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.82rem' }}>{s.shipment_code}</td>
                                                 <td>{fromName}</td>
                                                 <td>{toName}</td>

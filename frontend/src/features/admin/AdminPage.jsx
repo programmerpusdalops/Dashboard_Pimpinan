@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, createElement } from 'react';
 import {
     Users as UsersIcon, Plus, X, Trash2, ToggleLeft, ToggleRight,
     AlertCircle, Search, ShieldCheck, UserPlus, RefreshCw,
@@ -603,7 +603,7 @@ export default function AdminPage() {
                         }}
                         onClick={() => setTab(key)}
                     >
-                        <Icon size={14} /> {label}
+                        {createElement(Icon, { size: 14 })} {label}
                     </button>
                 ))}
             </div>

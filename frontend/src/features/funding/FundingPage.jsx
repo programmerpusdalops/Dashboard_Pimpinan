@@ -5,6 +5,9 @@ import {
     BarChart, Bar, CartesianGrid, Legend, ReferenceLine,
 } from 'recharts';
 import { useFundingSummary, useBurnRate, useAllocations, useExpenditures } from './hooks/useFunding';
+import { useComponentsByNavKey } from '../../features/app-settings/hooks/useAppSettings';
+import AlertBanner from '../../components/common/AlertBanner';
+import { ShieldAlert } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────
 const fmt = (val) => {
@@ -40,6 +43,15 @@ export default function FundingPage() {
     const { data: allocs, isLoading: aLoading } = useAllocations(allocParams);
     const { data: expenditures, isLoading: expLoading } = useExpenditures();
 
+    // ── Component Visibility Config ──────────────────────────────
+    const { data: compConfigs = [] } = useComponentsByNavKey('funding');
+    
+    const isVisible = (key) => {
+        if (compConfigs.length === 0) return true; // Default tampil
+        const comp = compConfigs.find(c => c.component_key === key);
+        return comp ? comp.is_visible : true;
+    };
+
     // Chart data
     const burnChartData = (Array.isArray(burnRate) ? burnRate : []).map(d => ({
         tanggal: new Date(d.expenditure_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
@@ -51,17 +63,16 @@ export default function FundingPage() {
         ? Object.entries(funding.sektorBreakdown)
         : [];
 
-    const sourceEntries = funding?.sourceBreakdown
-        ? Object.entries(funding.sourceBreakdown)
-        : [];
-
-
     const persen = funding?.persenRealisasi ?? 0;
     const isOverBudget = persen >= 90;
 
     return (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
-
+            {compConfigs.some(c => !c.is_visible) && (
+                <AlertBanner icon={ShieldAlert} title="Proteksi Data" color="#f59e0b" background="rgba(245, 158, 11, 0.08)" borderColor="rgba(245, 158, 11, 0.2)">
+                    Beberapa metrik keuangan sensitif mungkin telah dibatasi untuk peran Anda.
+                </AlertBanner>
+            )}
             {/* ── Source Filter ── */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Filter size={14} style={{ color: 'var(--text-muted)' }} />
@@ -83,6 +94,7 @@ export default function FundingPage() {
             </div>
 
             {/* ── KPI Cards ── */}
+            {isVisible('funding_kpi') && (
             <div className="kpi-grid" style={{ marginBottom: 20 }}>
                 <div className="kpi-card info">
                     <div className="kpi-title"><Landmark size={13} /> Total Pagu {filterSource || ''}</div>
@@ -111,6 +123,7 @@ export default function FundingPage() {
                     </div>
                 )}
             </div>
+            )}
 
             {/* ── Dana per Sumber ── */}
             <div style={{ marginBottom: 20 }}>
@@ -166,18 +179,23 @@ export default function FundingPage() {
 
             {/* ── Tabs ── */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                {['overview', 'alokasi', 'pengeluaran'].map(tab => (
-                    <button key={tab}
-                        className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-outline'}`}
-                        style={{ padding: '6px 14px', fontSize: '0.78rem', textTransform: 'capitalize' }}
-                        onClick={() => setActiveTab(tab)}>
-                        {tab === 'overview' ? 'Grafik & Serapan' : tab === 'alokasi' ? 'Alokasi Anggaran' : 'Realisasi Pengeluaran'}
-                    </button>
-                ))}
+                {['overview', 'alokasi', 'pengeluaran'].map(tab => {
+                    if (tab === 'overview' && !isVisible('funding_charts')) return null;
+                    if (tab === 'alokasi' && !isVisible('allocation_table')) return null;
+                    if (tab === 'pengeluaran' && !isVisible('expenditure_table')) return null;
+                    return (
+                        <button key={tab}
+                            className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ padding: '6px 14px', fontSize: '0.78rem', textTransform: 'capitalize' }}
+                            onClick={() => setActiveTab(tab)}>
+                            {tab === 'overview' ? 'Grafik & Serapan' : tab === 'alokasi' ? 'Alokasi Anggaran' : 'Realisasi Pengeluaran'}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* ── Overview Tab ── */}
-            {activeTab === 'overview' && (
+            {activeTab === 'overview' && isVisible('funding_charts') && (
                 <div className="grid-2-1">
                     {/* Burn Rate Line Chart */}
                     <div className="card">
@@ -186,7 +204,7 @@ export default function FundingPage() {
                         </div>
                         <div className="chart-container" style={{ height: 280 }}>
                             {brLoading ? <div className="skeleton" style={{ height: '100%' }} /> : (
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <LineChart data={burnChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                         <XAxis dataKey="tanggal" tick={{ fill: '#94a3b8', fontSize: 10 }} />
@@ -244,7 +262,7 @@ export default function FundingPage() {
             )}
 
             {/* ── Alokasi Tab ── */}
-            {activeTab === 'alokasi' && (
+            {activeTab === 'alokasi' && isVisible('allocation_table') && (
                 <div className="card">
                     <div className="card-header">
                         <div className="card-title">Alokasi Anggaran per Sektor {filterSource ? `(${filterSource})` : ''}</div>
@@ -309,7 +327,7 @@ export default function FundingPage() {
             )}
 
             {/* ── Pengeluaran Tab ── */}
-            {activeTab === 'pengeluaran' && (
+            {activeTab === 'pengeluaran' && isVisible('expenditure_table') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {/* Chart */}
                     <div className="card">
@@ -324,7 +342,7 @@ export default function FundingPage() {
                             </p>
                         ) : (
                             <div className="chart-container" style={{ height: 280, marginTop: 8 }}>
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <BarChart data={burnChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                         <XAxis dataKey="tanggal" tick={{ fill: '#94a3b8', fontSize: 10 }} />

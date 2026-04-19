@@ -2,6 +2,7 @@
 require('dotenv').config();
 const app = require('./src/config/app');
 const sequelize = require('./src/config/database');
+const appSettingsService = require('./src/modules/app-settings/appSettings.service');
 
 const PORT = process.env.PORT || 3000;
 
@@ -17,6 +18,14 @@ async function startServer() {
         if (process.env.NODE_ENV === 'development' && process.env.DB_SYNC_DEV === 'true') {
             await sequelize.sync({ alter: true });
             console.log('⚠️  Models force-synced (dev mode). Nonaktifkan DB_SYNC_DEV di .env setelah setup awal.');
+        }
+
+        // Auto-seed app settings (idempotent — hanya insert jika tabel kosong)
+        try {
+            await appSettingsService.seedAll();
+            console.log('✅ App settings seeded (atau sudah ada).');
+        } catch (seedErr) {
+            console.warn('⚠️  App settings seed gagal (tabel mungkin belum ada):', seedErr.message);
         }
 
         app.listen(PORT, () => {

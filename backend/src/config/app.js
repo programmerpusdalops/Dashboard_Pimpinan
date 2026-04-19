@@ -21,8 +21,12 @@ const decisionRoutes = require('../modules/decisions/decision.routes');
 const instructionRoutes = require('../modules/instructions/instruction.routes');
 const fundingRoutes = require('../modules/funding/funding.routes');
 const dashboardRoutes = require('../modules/dashboard/dashboard.routes');
+const appSettingsRoutes = require('../modules/app-settings/appSettings.routes');
+const notificationRoutes = require('../modules/notifications/notification.routes');
 
 const { errorHandler, notFound } = require('../middlewares/errorHandler');
+const { checkNavAccess } = require('../middlewares/navAccess.middleware');
+const { authenticate } = require('../middlewares/auth.middleware');
 
 const app = express();
 
@@ -30,8 +34,20 @@ const app = express();
 app.use(helmet());
 
 // CORS
+const allowedOrigins = [
+    'http://localhost:5180',
+    'http://localhost:5181',
+    ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : [])
+];
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5180',
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
 
@@ -70,20 +86,20 @@ app.get(API, (req, res) => {
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/users`, userRoutes);
 
-// Events & nested casualties — FIX: casualty mounted di prefix terpisah
+// Events & nested casualties — akses diproteksi oleh nav_access_configs
 app.use(`${API}/events`, eventRoutes);
 app.use(`${API}/events`, casualtyRoutes);   // casualtyRoutes handles /:eventId/casualties internally
 
-// Logistics
+// Logistics — nav access check via DB
 app.use(`${API}/warehouses`, warehouseRoutes);
 app.use(`${API}/shipments`, shipmentRoutes);
 
-// Refugees — FIX: healthRoutes mounted di /shelters bukan prefix terpisah
+// Refugees — nav access check via DB
 app.use(`${API}/shelters`, shelterRoutes);
 app.use(`${API}/refugees`, refugeeRoutes);
 app.use(`${API}/shelters`, healthRoutes);   // healthRoutes handles /:shelterId/health internally
 
-// Operations & Decisions
+// Operations & Decisions — nav access check via DB
 app.use(`${API}/tasks`, taskRoutes);
 app.use(`${API}/decisions`, decisionRoutes);
 app.use(`${API}/instructions`, instructionRoutes);
@@ -91,6 +107,8 @@ app.use(`${API}/instructions`, instructionRoutes);
 // Funding & Dashboard
 app.use(`${API}/funding`, fundingRoutes);
 app.use(`${API}/dashboard`, dashboardRoutes);
+app.use(`${API}/app-settings`, appSettingsRoutes);
+app.use(`${API}/notifications`, notificationRoutes);
 
 // ─── Error handlers ───────────────────────────────────────────
 app.use(notFound);

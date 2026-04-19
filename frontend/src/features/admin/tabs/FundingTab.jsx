@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
     Plus, X, Search, RefreshCw, Edit2, Trash2,
     DollarSign, Receipt, TrendingDown,
@@ -241,25 +241,25 @@ export default function FundingTab() {
     const totalSpent = expenditures.reduce((s, e) => s + Number(e.amount || 0), 0);
 
     // Per-source totals
-    const sourceStats = useMemo(() => {
+    const sourceStats = (() => {
         const map = {};
         allocations.forEach(a => {
             map[a.source] = (map[a.source] || 0) + Number(a.total_amount || 0);
         });
         return map;
-    }, [allocations]);
+    })();
 
-    const filteredAlloc = useMemo(() => {
+    const filteredAlloc = (() => {
         if (!debouncedSearch) return allocations;
         const q = debouncedSearch.toLowerCase();
         return allocations.filter(a => a.sector?.toLowerCase().includes(q) || a.source?.toLowerCase().includes(q));
-    }, [allocations, debouncedSearch]);
+    })();
 
-    const filteredExp = useMemo(() => {
+    const filteredExp = (() => {
         if (!debouncedSearch) return expenditures;
         const q = debouncedSearch.toLowerCase();
         return expenditures.filter(e => e.description?.toLowerCase().includes(q));
-    }, [expenditures, debouncedSearch]);
+    })();
 
     const handleEditClick = (alloc) => {
         setEditAlloc({

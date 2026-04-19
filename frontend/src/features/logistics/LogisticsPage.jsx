@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Truck, ArrowRight, AlertTriangle, Package, Plus, X, RefreshCw, Warehouse, Wrench, Car } from 'lucide-react';
 import { useWarehouses, useShipments, useCreateShipment, useUpdateShipmentStatus } from './hooks/useLogistics';
 import { usePermission } from '../../hooks/usePermission';
+import { useComponentsByNavKey } from '../../features/app-settings/hooks/useAppSettings';
+import AlertBanner from '../../components/common/AlertBanner';
+import { ShieldAlert } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────
 const CATEGORY_STYLE = {
@@ -157,8 +160,17 @@ export default function LogisticsPage() {
     const [form, setForm] = useState(EMPTY_FORM);
     const { isOperator } = usePermission();
 
+    // ── Component Visibility Config ──────────────────────────────
+    const { data: compConfigs = [] } = useComponentsByNavKey('logistics');
+    
+    const isVisible = (key) => {
+        if (compConfigs.length === 0) return true; // Default tampil
+        const comp = compConfigs.find(c => c.component_key === key);
+        return comp ? comp.is_visible : true;
+    };
+
     const { data: warehouses = [], isLoading: whLoading, isError: whError, refetch: refetchWh } = useWarehouses();
-    const { data: shipments = [], isLoading: shipLoading, refetch: refetchShip } = useShipments();
+    const { data: shipments = [], isLoading: shipLoading } = useShipments();
     const createShipment = useCreateShipment();
 
     const handleCreate = async (e) => {
@@ -170,8 +182,13 @@ export default function LogisticsPage() {
 
     return (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
-
+            {compConfigs.some(c => !c.is_visible) && (
+                <AlertBanner icon={ShieldAlert} title="Logistik Terbatas" color="#f59e0b" background="rgba(245, 158, 11, 0.08)" borderColor="rgba(245, 158, 11, 0.2)">
+                    Beberapa manajemen stok dan inventaris mungkin telah dibatasi oleh administrator.
+                </AlertBanner>
+            )}
             {/* ── KPI Summary ── */}
+            {isVisible('logistics_kpi') && (
             <div className="kpi-grid" style={{ marginBottom: 20 }}>
                 <div className="kpi-card info">
                     <div className="kpi-title"><Warehouse size={13} /> Total Gudang</div>
@@ -192,8 +209,10 @@ export default function LogisticsPage() {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* ── Warehouse Grid ── */}
+            {isVisible('warehouse_cards') && (
             <div style={{ marginBottom: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
@@ -218,8 +237,10 @@ export default function LogisticsPage() {
                     </div>
                 )}
             </div>
+            )}
 
             {/* ── Shipments ── */}
+            {isVisible('shipment_list') && (
             <div className="card">
                 <div className="card-header">
                     <div className="card-title"><Truck size={15} /> STATUS PENGIRIMAN LOGISTIK</div>
@@ -280,6 +301,7 @@ export default function LogisticsPage() {
                     </div>
                 )}
             </div>
+            )}
         </div>
     );
 }

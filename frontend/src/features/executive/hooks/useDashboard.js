@@ -62,19 +62,6 @@ export function useFundingSummary(eventId) {
     return useQuery({
         queryKey: [...dashboardKeys.funding(), eventId],
         queryFn: async () => {
-            const [allocations, expenditures] = await Promise.all([
-                fundingService.getAllocations(eventId),
-                fundingService.getExpenditures(eventId),
-            ]);
-            const totalAllocated = (allocations ?? []).reduce((s, a) => s + Number(a.total_amount || 0), 0);
-            
-            // For expenditures, when filtering by event, we may need to only sum expenditures 
-            // tied to allocations for that event. Since our backend might return all expenditures 
-            // if we don't fix the /funding/expenditures to filter by event_id across joined tables, 
-            // we will do the filtering safely here on the frontend if needed, but assuming 
-            // the backend handles it or we approximate it. 
-            // Wait, our backend /funding route already returns the perfectly aggregated data!
-            // Let's use fundingService.getSummary(eventId) instead!
             const summary = await fundingService.getSummary(eventId);
             return {
                 totalAllocated: summary.totalPagu,
