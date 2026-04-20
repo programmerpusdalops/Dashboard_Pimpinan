@@ -10,7 +10,7 @@
     padding: 0 24px;
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: var(--z-topbar);
 }
 
 .topbar-left {
@@ -161,6 +161,7 @@
     pointer-events: none;
     white-space: nowrap;
     box-shadow: var(--shadow-md);
+    z-index: var(--z-tooltip);
     transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 

@@ -208,7 +208,7 @@ export default function InstructionPanel() {
             <button
                 onClick={() => setOpen(v => !v)}
                 style={{
-                    position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
+                    position: 'fixed', bottom: 24, right: 24, zIndex: 'var(--z-popover)',
                     width: 52, height: 52, borderRadius: '50%',
                     background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary, #f97316))',
                     color: '#fff', border: 'none', cursor: 'pointer',
@@ -235,7 +235,7 @@ export default function InstructionPanel() {
             {/* Panel */}
             {open && (
                 <div style={{
-                    position: 'fixed', bottom: 86, right: 24, zIndex: 999,
+                    position: 'fixed', bottom: 86, right: 24, zIndex: 'var(--z-popover)',
                     width: 380, maxHeight: 'calc(100vh - 140px)',
                     background: 'var(--bg-card)', borderRadius: 'var(--radius-lg, 12px)',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.25)',

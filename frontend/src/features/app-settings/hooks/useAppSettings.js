@@ -109,6 +109,19 @@ export function useToggleNotifDot() {
     });
 }
 
+// ── Seed / Sync Defaults ─────────────────────────────────────────
+export function useSeedAppSettings() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: appSettingsService.seed,
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['app-settings'] });
+            toast.success('Seed berhasil. Konfigurasi disinkronkan.');
+        },
+        onError: (err) => toast.error(err.response?.data?.message || 'Gagal menjalankan seed'),
+    });
+}
+
 export function useSystemStatusesPublic() {
     return useQuery({
         queryKey: settingsKeys.systemStatusesPublic,

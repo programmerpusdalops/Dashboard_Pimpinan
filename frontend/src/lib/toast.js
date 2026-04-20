@@ -16,13 +16,23 @@ function createToast(message, type = 'info') {
     // Pastikan container ada
     let container = document.getElementById('toast-container');
     if (!container) {
+        const zFromTheme = (() => {
+            try {
+                const v = getComputedStyle(document.documentElement).getPropertyValue('--z-toast').trim();
+                const n = parseInt(v, 10);
+                return Number.isFinite(n) ? n : 14500;
+            } catch {
+                return 14500;
+            }
+        })();
+
         container = document.createElement('div');
         container.id = 'toast-container';
         container.style.cssText = `
             position: fixed;
             bottom: 24px;
             right: 24px;
-            z-index: 9999;
+            z-index: ${zFromTheme};
             display: flex;
             flex-direction: column;
             gap: 10px;

@@ -1,4 +1,4 @@
-import { useState, createElement } from 'react';
+import { useEffect, useState, createElement } from 'react';
 import {
     Users as UsersIcon, Plus, X, Trash2, ToggleLeft, ToggleRight,
     AlertCircle, Search, ShieldCheck, UserPlus, RefreshCw,
@@ -10,6 +10,7 @@ import { eventsService } from '../../services/events.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePermission } from '../../hooks/usePermission';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useComponentsByNavKey } from '../app-settings/hooks/useAppSettings';
 import { toast } from '../../lib/toast';
 
 // ── Tab Imports ──────────────────────────────────────────────────
@@ -20,11 +21,14 @@ import FundingTab from './tabs/FundingTab';
 import DecisionsTab from './tabs/DecisionsTab';
 
 // ── Constants ────────────────────────────────────────────────────
-const ROLES = ['viewer', 'operator', 'admin'];
+const ALL_ROLES = ['viewer', 'operator', 'admin', 'superadmin', 'pimpinan'];
+const DEFAULT_ADMIN_CREATABLE_ROLES = ['viewer', 'operator', 'admin'];
 const ROLE_STYLE = {
     admin: { bg: 'var(--status-yellow-bg)', color: 'var(--status-yellow)', label: 'Admin' },
     operator: { bg: 'var(--status-blue-bg)', color: 'var(--status-blue)', label: 'Operator' },
     viewer: { bg: 'var(--status-green-bg)', color: 'var(--status-green)', label: 'Viewer' },
+    superadmin: { bg: 'rgba(99,102,241,0.12)', color: '#6366f1', label: 'Superadmin' },
+    pimpinan: { bg: 'rgba(244,63,94,0.12)', color: '#f43f5e', label: 'Pimpinan' },
 };
 
 const EVENT_TYPE_LABEL = {
@@ -50,8 +54,11 @@ const TABS = [
 ];
 
 // ── User Form Modal ──────────────────────────────────────────────
-function UserForm({ onClose, initial }) {
-    const [form, setForm] = useState(initial ?? EMPTY_USER);
+function UserForm({ onClose, initial, roleOptions, defaultRole }) {
+    const [form, setForm] = useState(() => {
+        if (initial) return initial;
+        return { ...EMPTY_USER, role: defaultRole || EMPTY_USER.role };
+    });
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
     const isEdit = !!initial;
@@ -103,7 +110,9 @@ function UserForm({ onClose, initial }) {
                     <label className="form-label">Role</label>
                     <select className="form-input" value={form.role}
                         onChange={e => setForm({ ...form, role: e.target.value })}>
-                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                        {(roleOptions || DEFAULT_ADMIN_CREATABLE_ROLES).map(r => (
+                            <option key={r} value={r}>{r}</option>
+                        ))}
                     </select>
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
@@ -123,7 +132,7 @@ function UserForm({ onClose, initial }) {
 }
 
 // ── Users Tab ────────────────────────────────────────────────────
-function UsersTab() {
+function UsersTab({ roleOptions, defaultRole, filterRoles, canSeeSuperadmin, userCaps }) {
     const [showForm, setShowForm] = useState(false);
     const [editUser, setEditUser] = useState(null);
     const [search, setSearch] = useState('');
@@ -137,13 +146,31 @@ function UsersTab() {
         page,
         limit: 15,
         role: filterRole || undefined,
+        include_superadmin: canSeeSuperadmin ? true : undefined,
     });
 
-    const users = (data?.data ?? []).filter(u => u.role !== 'superadmin');
+    const users = (data?.data ?? []).filter(u => (canSeeSuperadmin ? true : u.role !== 'superadmin'));
     const pagination = data?.pagination;
 
     const toggleActive = useToggleUserActive();
     const deleteUser = useDeleteUser();
+
+    const canRead = canSeeSuperadmin ? true : (userCaps?.read !== false);
+    const canCreate = canSeeSuperadmin ? true : (userCaps?.create !== false);
+    const canUpdate = canSeeSuperadmin ? true : (userCaps?.update !== false);
+    const canToggleActive = canSeeSuperadmin ? true : (userCaps?.toggle_active !== false);
+    const hasAnyRowAction = !!(canUpdate || canToggleActive || canSeeSuperadmin);
+
+    // If read is revoked while this page is open, close edit/create UI and reload to reflect restriction
+    useEffect(() => {
+        if (canRead) return;
+        setShowForm(false);
+        setEditUser(null);
+        setPage(1);
+        // Force refetch once so UI transitions to "restricted" state even if cache had old data
+        refetch();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [canRead]);
 
     const filtered = debouncedSearch
         ? users.filter(u =>
@@ -155,14 +182,29 @@ function UsersTab() {
 
     return (
         <div>
-            {showForm && !editUser && (
-                <UserForm onClose={() => setShowForm(false)} />
-            )}
-            {editUser && (
-                <UserForm initial={editUser} onClose={() => setEditUser(null)} />
+            {!canRead && (
+                <div className="alert alert-warn" style={{ marginBottom: 12 }}>
+                    Akses melihat daftar user dinonaktifkan oleh superadmin.
+                </div>
             )}
 
-            <div style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            {showForm && !editUser && (
+                <UserForm
+                    onClose={() => setShowForm(false)}
+                    roleOptions={roleOptions}
+                    defaultRole={defaultRole}
+                />
+            )}
+            {editUser && (
+                <UserForm
+                    initial={editUser}
+                    onClose={() => setEditUser(null)}
+                    roleOptions={roleOptions}
+                    defaultRole={defaultRole}
+                />
+            )}
+
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap', opacity: canRead ? 1 : 0.65, pointerEvents: canRead ? 'auto' : 'none' }}>
                 <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
                     <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input className="form-input" style={{ paddingLeft: 32 }}
@@ -172,15 +214,19 @@ function UsersTab() {
                 <select className="form-input" style={{ width: 140 }}
                     value={filterRole} onChange={e => { setFilterRole(e.target.value); setPage(1); }}>
                     <option value="">Semua Role</option>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {(filterRoles || DEFAULT_ADMIN_CREATABLE_ROLES).map(r => (
+                        <option key={r} value={r}>{r}</option>
+                    ))}
                 </select>
                 <button className="btn btn-outline" style={{ padding: '9px 12px' }} onClick={refetch}>
                     <RefreshCw size={13} />
                 </button>
-                <button className="btn btn-primary" style={{ padding: '9px 14px', fontSize: '0.8rem' }}
-                    onClick={() => { setShowForm(true); setEditUser(null); }}>
-                    <UserPlus size={14} /> Tambah User
-                </button>
+                {canCreate && (
+                    <button className="btn btn-primary" style={{ padding: '9px 14px', fontSize: '0.8rem' }}
+                        onClick={() => { setShowForm(true); setEditUser(null); }}>
+                        <UserPlus size={14} /> Tambah User
+                    </button>
+                )}
             </div>
 
             <div className="card">
@@ -205,7 +251,7 @@ function UsersTab() {
                             <thead>
                                 <tr>
                                     <th>Nama</th><th>Email</th><th>Role</th>
-                                    <th>OPD</th><th>Status</th><th>Aksi</th>
+                                    <th>OPD</th><th>Status</th>{hasAnyRowAction ? <th>Aksi</th> : null}
                                 </tr>
                             </thead>
                             <tbody>
@@ -226,25 +272,31 @@ function UsersTab() {
                                                     {u.is_active ? 'Aktif' : 'Nonaktif'}
                                                 </span>
                                             </td>
-                                            <td>
-                                                <div style={{ display: 'flex', gap: 4 }}>
-                                                    <button className="btn btn-outline" style={{ padding: '4px 8px' }}
-                                                        onClick={() => { setEditUser(u); setShowForm(false); }}
-                                                        title="Edit">✎</button>
-                                                    <button className="btn btn-outline" style={{ padding: '4px 8px' }}
-                                                        onClick={() => toggleActive.mutate(u.id)}
-                                                        title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}>
-                                                        {u.is_active ? <ToggleRight size={14} style={{ color: 'var(--status-green)' }} /> : <ToggleLeft size={14} />}
-                                                    </button>
-                                                    {isSuperAdmin && (
-                                                        <button className="btn btn-outline"
-                                                            style={{ padding: '4px 8px', color: 'var(--status-red)', borderColor: 'var(--status-red)' }}
-                                                            onClick={() => { if (confirm(`Hapus user ${u.name}?`)) deleteUser.mutate(u.id); }}>
-                                                            <Trash2 size={13} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
+                                            {hasAnyRowAction ? (
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        {canUpdate && (
+                                                            <button className="btn btn-outline" style={{ padding: '4px 8px' }}
+                                                                onClick={() => { setEditUser(u); setShowForm(false); }}
+                                                                title="Edit">✎</button>
+                                                        )}
+                                                        {canToggleActive && (
+                                                            <button className="btn btn-outline" style={{ padding: '4px 8px' }}
+                                                                onClick={() => toggleActive.mutate(u.id)}
+                                                                title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}>
+                                                                {u.is_active ? <ToggleRight size={14} style={{ color: 'var(--status-green)' }} /> : <ToggleLeft size={14} />}
+                                                            </button>
+                                                        )}
+                                                        {isSuperAdmin && (
+                                                            <button className="btn btn-outline"
+                                                                style={{ padding: '4px 8px', color: 'var(--status-red)', borderColor: 'var(--status-red)' }}
+                                                                onClick={() => { if (confirm(`Hapus user ${u.name}?`)) deleteUser.mutate(u.id); }}>
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            ) : null}
                                         </tr>
                                     );
                                 })}
@@ -570,6 +622,42 @@ function EventsTab() {
 // ── Main Page ────────────────────────────────────────────────────
 export default function AdminPage() {
     const [tab, setTab] = useState('users');
+    const { isSuperAdmin } = usePermission();
+
+    // Admin page component visibility configs (from App Settings)
+    const { data: adminCompConfigs = [] } = useComponentsByNavKey('admin');
+    const compMap = adminCompConfigs.reduce((acc, c) => {
+        acc[c.component_key] = !!c.is_visible;
+        return acc;
+    }, {});
+
+    const visibleTabs = isSuperAdmin
+        ? TABS
+        : TABS.filter(t => compMap[`tab_${t.key}`] !== false);
+
+    const configuredRoleOptions = ALL_ROLES.filter(r => compMap[`users_allowed_role:${r}`]);
+    const roleOptions = isSuperAdmin
+        ? ALL_ROLES
+        : (configuredRoleOptions.length > 0 ? configuredRoleOptions : DEFAULT_ADMIN_CREATABLE_ROLES);
+
+    const defaultRole = roleOptions.includes('operator')
+        ? 'operator'
+        : (roleOptions[0] || 'operator');
+
+    const filterRoles = isSuperAdmin ? ALL_ROLES : DEFAULT_ADMIN_CREATABLE_ROLES;
+
+    const userCaps = {
+        read: isSuperAdmin ? true : (compMap['users_crud:read'] !== false),
+        create: isSuperAdmin ? true : (compMap['users_crud:create'] !== false),
+        update: isSuperAdmin ? true : (compMap['users_crud:update'] !== false),
+        toggle_active: isSuperAdmin ? true : (compMap['users_crud:toggle_active'] !== false),
+    };
+
+    // Keep selected tab valid if superadmin toggles visibility for admin
+    useEffect(() => {
+        const isTabVisible = visibleTabs.some(t => t.key === tab);
+        if (!isTabVisible) setTab(visibleTabs[0]?.key || 'users');
+    }, [tab, visibleTabs]);
 
     return (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
@@ -580,7 +668,7 @@ export default function AdminPage() {
                 display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap',
                 padding: '4px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)',
             }}>
-                {TABS.map(({ key, label, icon: Icon }) => (
+                {visibleTabs.map(({ key, label, icon: Icon }) => (
                     <button
                         key={key}
                         className={`btn ${tab === key ? 'btn-primary' : 'btn-outline'}`}
@@ -597,7 +685,15 @@ export default function AdminPage() {
             </div>
 
             {/* Tab Content */}
-            {tab === 'users' && <UsersTab />}
+            {tab === 'users' && (
+                <UsersTab
+                    roleOptions={roleOptions}
+                    defaultRole={defaultRole}
+                    filterRoles={filterRoles}
+                    canSeeSuperadmin={isSuperAdmin}
+                    userCaps={userCaps}
+                />
+            )}
             {tab === 'events' && <EventsTab />}
             {tab === 'operations' && <OperationsTab />}
             {tab === 'logistics' && <LogisticsTab />}

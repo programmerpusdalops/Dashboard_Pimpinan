@@ -5,6 +5,10 @@
 import api from '../lib/axios';
 
 export const appSettingsService = {
+    // Seed (superadmin only) — safe/idempotent seeding on backend
+    seed: () =>
+        api.post('/app-settings/seed').then(r => r.data.data),
+
     // Nav Access
     getNavAccess: () =>
         api.get('/app-settings/nav-access').then(r => r.data.data),

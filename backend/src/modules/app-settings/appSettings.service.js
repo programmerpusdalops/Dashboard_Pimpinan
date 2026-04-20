@@ -59,6 +59,28 @@ const DEFAULT_COMPONENTS = [
     { nav_key: 'instruksi', component_key: 'instruksi_stats', component_label: 'Statistik Instruksi', sort_order: 1 },
     { nav_key: 'instruksi', component_key: 'instruksi_filters', component_label: 'Filter Instruksi', sort_order: 2 },
     { nav_key: 'instruksi', component_key: 'instruksi_list', component_label: 'Daftar Instruksi', sort_order: 3 },
+
+    // Admin (Pengaturan Master) — tab visibility + role options for "Tambah User"
+    { nav_key: 'admin', component_key: 'tab_users', component_label: 'Tab: User', sort_order: 1 },
+    { nav_key: 'admin', component_key: 'tab_events', component_label: 'Tab: Kejadian', sort_order: 2 },
+    { nav_key: 'admin', component_key: 'tab_operations', component_label: 'Tab: Operasi', sort_order: 3 },
+    { nav_key: 'admin', component_key: 'tab_logistics', component_label: 'Tab: Logistik & Peralatan', sort_order: 4 },
+    { nav_key: 'admin', component_key: 'tab_refugees', component_label: 'Tab: Pengungsi', sort_order: 5 },
+    { nav_key: 'admin', component_key: 'tab_funding', component_label: 'Tab: Pendanaan', sort_order: 6 },
+    { nav_key: 'admin', component_key: 'tab_decisions', component_label: 'Tab: Keputusan', sort_order: 7 },
+
+    // Roles allowed to be created by admin (superadmin always bypasses these toggles)
+    { nav_key: 'admin', component_key: 'users_allowed_role:viewer', component_label: 'Tambah User: Role viewer', sort_order: 20, is_visible: true },
+    { nav_key: 'admin', component_key: 'users_allowed_role:operator', component_label: 'Tambah User: Role operator', sort_order: 21, is_visible: true },
+    { nav_key: 'admin', component_key: 'users_allowed_role:admin', component_label: 'Tambah User: Role admin', sort_order: 22, is_visible: true },
+    { nav_key: 'admin', component_key: 'users_allowed_role:superadmin', component_label: 'Tambah User: Role superadmin', sort_order: 23, is_visible: false },
+    { nav_key: 'admin', component_key: 'users_allowed_role:pimpinan', component_label: 'Tambah User: Role pimpinan', sort_order: 24, is_visible: false },
+
+    // CRUD capabilities for admin on User module (superadmin always bypasses these toggles)
+    { nav_key: 'admin', component_key: 'users_crud:read', component_label: 'Users CRUD: Lihat daftar/detail', sort_order: 30, is_visible: true },
+    { nav_key: 'admin', component_key: 'users_crud:create', component_label: 'Users CRUD: Tambah user', sort_order: 31, is_visible: true },
+    { nav_key: 'admin', component_key: 'users_crud:update', component_label: 'Users CRUD: Edit user', sort_order: 32, is_visible: true },
+    { nav_key: 'admin', component_key: 'users_crud:toggle_active', component_label: 'Users CRUD: Aktif/nonaktif user', sort_order: 33, is_visible: true },
 ];
 
 const DEFAULT_NOTIF_DOTS = [
@@ -189,6 +211,22 @@ const seedComponents = async () => {
 };
 
 /**
+ * Ensure default component configs exist (idempotent, non-destructive).
+ * This allows adding new defaults (e.g. admin page toggles) without requiring table to be empty.
+ */
+const ensureComponentsReady = async () => {
+    const existing = await ComponentVisibilityConfig.findAll({
+        attributes: ['nav_key', 'component_key'],
+    });
+    const existingSet = new Set(existing.map((r) => `${r.nav_key}::${r.component_key}`));
+
+    const missing = DEFAULT_COMPONENTS.filter((c) => !existingSet.has(`${c.nav_key}::${c.component_key}`));
+    if (missing.length === 0) return;
+
+    await ComponentVisibilityConfig.bulkCreate(missing);
+};
+
+/**
  * Seed default notification dot configs kalau belum ada
  */
 const seedNotifDots = async () => {
@@ -211,6 +249,8 @@ const seedAll = async () => {
 
     await seedNavAccess();
     await seedComponents();
+    // Add any new default component configs even if table already has data
+    await ensureComponentsReady();
     await seedNotifDots();
     await ensureSystemStatusesReady();
 };

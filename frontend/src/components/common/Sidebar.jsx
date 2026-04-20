@@ -276,7 +276,7 @@ export default function Sidebar() {
                     <div style={{
                         position: 'absolute', bottom: 'calc(100% + 4px)', left: 12, right: -12,
                         background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-md)', padding: 0, zIndex: 1000,
+                        borderRadius: 'var(--radius-md)', padding: 0, zIndex: 'var(--z-popover)',
                         boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', width: 260,
                         animation: 'fadeIn 0.2s ease', overflow: 'hidden'
                     }}>

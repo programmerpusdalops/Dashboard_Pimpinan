@@ -9,7 +9,7 @@
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    z-index: 100;
+    z-index: var(--z-sidebar);
     transition: width var(--transition-normal);
 }
 
@@ -179,7 +179,7 @@
     font-size: 0.82rem;
     font-weight: 600;
     box-shadow: var(--shadow-md);
-    z-index: 10000;
+    z-index: var(--z-tooltip);
     pointer-events: none;
     max-width: 260px;
     white-space: normal;

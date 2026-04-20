@@ -4,12 +4,16 @@
     border-radius: var(--radius-lg);
     overflow: hidden;
     border: 1px solid var(--border-color);
+    position: relative;
+    z-index: var(--z-map);
 }
 
 .map-wrapper .leaflet-container {
     height: 100%;
     width: 100%;
     background: var(--bg-primary);
+    position: relative;
+    z-index: var(--z-map);
 }
 
 .layer-toggles {

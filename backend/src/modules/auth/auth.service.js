@@ -29,8 +29,9 @@ const generateTokens = (user) => {
 };
 
 const login = async (email, password) => {
-    const user = await User.findOne({ where: { email, is_active: true } });
+    const user = await User.findOne({ where: { email } });
     if (!user) throw { statusCode: 401, message: 'Email atau password salah' };
+    if (!user.is_active) throw { statusCode: 403, message: 'Akun nonaktif. Hubungi admin untuk mengaktifkan akun.' };
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) throw { statusCode: 401, message: 'Email atau password salah' };

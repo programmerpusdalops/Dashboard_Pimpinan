@@ -57,6 +57,17 @@
   --sidebar-collapsed: 72px;
   --topbar-height: 60px;
 
+  /* Z-index scale (keep map below chrome/tooltips/modals) */
+  --z-map: 0;
+  --z-map-overlay: 1000;
+  --z-topbar: 11000;
+  --z-sidebar: 11200;
+  --z-popover: 12000;
+  --z-tooltip: 14000;
+  --z-toast: 14500;
+  --z-modal: 25000;
+  --z-confirm: 26000;
+
   /* Leaflet (for overrides in index.css) */
   --leaflet-popup-bg: #1a1f2e;
   --leaflet-popup-border: rgba(255, 255, 255, 0.08);
