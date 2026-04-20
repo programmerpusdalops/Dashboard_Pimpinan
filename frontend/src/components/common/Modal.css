@@ -1,0 +1,79 @@
+.app-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 25000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+}
+
+.app-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    border: none;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+
+.app-modal-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(10px);
+    animation: fadeIn 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 48px);
+}
+
+.app-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 10px;
+}
+
+.app-modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.app-modal-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-modal-title {
+    font-weight: 900;
+    letter-spacing: 0.3px;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Allow tighter card headers for specific modals */
+.bulk-delete-modal .card-header {
+    margin-bottom: 0;
+}
+
+.app-modal-body {
+    padding: 14px;
+    overflow: auto;
+}
+
+.app-modal-footer {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border-color);
+}

@@ -115,13 +115,13 @@ export default function RefugeesPage() {
                     <div className="card-header">
                         <div className="card-title"><Activity size={14} /> Distribusi Pengungsi per Posko</div>
                     </div>
-                    <div className="chart-container">
+                    <div className="chart-container" style={{ height: 280 }}>
                         {shelterLoading ? (
                             <div className="skeleton" style={{ height: '100%' }} />
                         ) : barData.length === 0 ? (
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Data kosong.</p>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                            <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                                 <BarChart data={barData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                     <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} />
                                     <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
@@ -138,13 +138,13 @@ export default function RefugeesPage() {
                     <div className="card-header">
                         <div className="card-title"><Baby size={14} /> Demografi Kelompok Rentan</div>
                     </div>
-                    <div className="chart-container">
+                    <div className="chart-container" style={{ height: 280 }}>
                         {sumLoading ? (
                             <div className="skeleton" style={{ height: '100%' }} />
                         ) : pieData.length === 0 ? (
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Data kosong.</p>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                            <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                                 <PieChart>
                                     <Pie data={pieData} cx="50%" cy="50%"
                                         innerRadius={55} outerRadius={85}

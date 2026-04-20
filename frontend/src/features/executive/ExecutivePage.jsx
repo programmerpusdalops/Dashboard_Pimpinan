@@ -559,7 +559,7 @@ export default function ExecutivePage() {
               <BarChart3 size={15} /> KEJADIAN PER JENIS BENCANA
             </div>
           </div>
-          <div className="chart-container">
+          <div className="chart-container" style={{ height: 280 }}>
             {eventsByType.length === 0 ? (
               <p
                 style={{
@@ -571,7 +571,7 @@ export default function ExecutivePage() {
                 Belum ada data kejadian aktif.
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+              <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart
                   data={eventsByType}
                   margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
@@ -601,7 +601,7 @@ export default function ExecutivePage() {
               <AlertTriangle size={15} /> DISTRIBUSI TINGKAT KEPARAHAN
             </div>
           </div>
-          <div className="chart-container">
+          <div className="chart-container" style={{ height: 280 }}>
             {severityDist.length === 0 ? (
               <p
                 style={{
@@ -613,7 +613,7 @@ export default function ExecutivePage() {
                 Belum ada data.
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+              <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
                   <Pie
                     data={severityDist}

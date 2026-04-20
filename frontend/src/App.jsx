@@ -5,21 +5,9 @@ import './App.css';
 import Sidebar from './components/common/Sidebar';
 import Topbar from './components/common/Topbar';
 import InstructionPanel from './components/common/InstructionPanel';
-import AlertBanner from './components/common/AlertBanner';
+import PageBanners from './components/common/PageBanners';
 import useAuthStore from './store/authStore';
 import { useNavAccessByRole } from './features/app-settings/hooks/useAppSettings';
-
-const pageTitles = {
-  '/': 'Dasbor Utama',
-  '/map': 'Peta Risiko & Dampak',
-  '/ops': 'Pusat Pengendalian',
-  '/logistics': 'Logistik & Peralatan',
-  '/refugees': 'Data Pengungsi',
-  '/funding': 'Anggaran & Pendanaan',
-  '/admin': 'Pengaturan Master',
-  '/instruksi': 'Log Instruksi Pimpinan',
-  '/app-settings': 'App Settings',
-};
 
 const NAV_KEY_MAP = {
     dashboard:      { path: '/' },
@@ -39,7 +27,6 @@ export default function App() {
   const { user } = useAuthStore();
   const { data: navConfigs } = useNavAccessByRole(user?.role);
   
-  const title = pageTitles[location.pathname] || 'Dashboard';
   const isMapPage = location.pathname === '/map';
 
   // ── Enforce Navigation Access ──
@@ -75,7 +62,8 @@ export default function App() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-area">
-        <Topbar title={title} />
+        <Topbar />
+        <PageBanners />
         <div className={`page-content${isMapPage ? ' page-map' : ''}`}>
           <Outlet />
         </div>

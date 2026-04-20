@@ -16,6 +16,14 @@ const notifyClients = async (message, target_role = 'all') => {
     } catch(e) {}
 };
 
+const requireExactRole = (role) => (req, res, next) => {
+    if (!req.user) return R.unauthorized(res);
+    if (req.user.role !== role) {
+        return R.forbidden(res, 'Role Anda tidak memiliki izin untuk aksi ini');
+    }
+    next();
+};
+
 // ═══════════════════════════════════════════════════════════════
 // SSE STREAM
 // ═══════════════════════════════════════════════════════════════
@@ -142,8 +150,89 @@ router.patch('/notif-dots/:id/toggle', authenticate, isSuperAdmin, async (req, r
 });
 
 // ═══════════════════════════════════════════════════════════════
+// SYSTEM STATUS
+router.get('/statuses/public', authenticate, async (req, res, next) => {
+    try {
+        R.success(res, await svc.getPublicSystemStatuses());
+    } catch (e) { next(e); }
+});
+
+router.patch('/statuses/current/:id', authenticate, requireExactRole('pimpinan'), async (req, res, next) => {
+    try {
+        const result = await svc.setCurrentSystemStatus(req.params.id, req.user.id);
+        appEmitter.emit('app_settings_changed', { type: 'system_status_changed', id: result.id });
+        R.success(res, result, 'Status sistem diperbarui');
+    } catch (e) { next(e); }
+});
+
+router.get('/statuses', authenticate, requireExactRole('superadmin'), async (req, res, next) => {
+    try {
+        R.success(res, await svc.getAllSystemStatuses());
+    } catch (e) { next(e); }
+});
+
+router.post('/statuses', authenticate, requireExactRole('superadmin'), async (req, res, next) => {
+    try {
+        const created = await svc.createSystemStatus(req.body, req.user.id);
+        appEmitter.emit('app_settings_changed', { type: 'system_status_created', id: created.id });
+        R.success(res, created, 'Status sistem dibuat');
+    } catch (e) { next(e); }
+});
+
+router.put('/statuses/:id', authenticate, requireExactRole('superadmin'), async (req, res, next) => {
+    try {
+        const updated = await svc.updateSystemStatus(req.params.id, req.body, req.user.id);
+        appEmitter.emit('app_settings_changed', { type: 'system_status_updated', id: updated.id });
+        R.success(res, updated, 'Status sistem diperbarui');
+    } catch (e) { next(e); }
+});
+
+router.delete('/statuses/:id', authenticate, requireExactRole('superadmin'), async (req, res, next) => {
+    try {
+        const result = await svc.deleteSystemStatus(req.params.id);
+        appEmitter.emit('app_settings_changed', { type: 'system_status_deleted', id: result.id });
+        R.success(res, result, 'Status sistem dihapus');
+    } catch (e) { next(e); }
+});
+
 // CUSTOM SYSTEM MESSAGES
 // ═══════════════════════════════════════════════════════════════
+// GET list notifications (superadmin panel)
+router.get('/notifications', authenticate, isSuperAdmin, async (req, res, next) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 200);
+        const notifs = await Notification.findAll({
+            order: [['createdAt', 'DESC']],
+            limit,
+        });
+        R.success(res, notifs);
+    } catch (e) { next(e); }
+});
+
+// DELETE bulk notifications (filtered by categories)
+router.delete('/notifications/bulk', authenticate, isSuperAdmin, async (req, res, next) => {
+    try {
+        const { Op } = require('sequelize');
+        const body = req.body || {};
+        const targetRoles = Array.isArray(body.target_roles) ? body.target_roles.filter(Boolean) : [];
+        const types = Array.isArray(body.types) ? body.types.filter(Boolean) : [];
+        const titles = Array.isArray(body.titles) ? body.titles.filter(Boolean) : [];
+
+        const where = {};
+        if (targetRoles.length) where.target_role = { [Op.in]: targetRoles };
+        if (types.length) where.type = { [Op.in]: types };
+        if (titles.length) where.title = { [Op.in]: titles };
+
+        if (!Object.keys(where).length) {
+            return R.error(res, 'Pilih minimal 1 kategori untuk bulk delete', 400);
+        }
+
+        const deletedCount = await Notification.destroy({ where });
+        appEmitter.emit('app_settings_changed', { bulk_deleted: true });
+        R.success(res, { deletedCount }, 'Bulk delete berhasil');
+    } catch (e) { next(e); }
+});
+
 router.post('/notifications', authenticate, isSuperAdmin, async (req, res, next) => {
     try {
         const { title, message, target_role, type } = req.body;
@@ -162,6 +251,100 @@ router.post('/notifications', authenticate, isSuperAdmin, async (req, res, next)
         
         R.success(res, notif, 'Notification sent.');
     } catch (e) { next(e); }
+});
+
+// PUT update notification
+router.put('/notifications/:id', authenticate, isSuperAdmin, async (req, res, next) => {
+    try {
+        const notif = await Notification.findByPk(req.params.id);
+        if (!notif) return R.error(res, 'Notification tidak ditemukan', 404);
+
+        const { title, message, target_role, type } = req.body;
+        await notif.update({
+            title: title !== undefined ? title : notif.title,
+            message: message !== undefined ? message : notif.message,
+            target_role: target_role !== undefined ? target_role : notif.target_role,
+            type: type !== undefined ? type : notif.type,
+        });
+
+        await notifyClients('System message diperbarui.', 'all');
+        appEmitter.emit('app_settings_changed', notif);
+        R.success(res, notif, 'Notification updated.');
+    } catch (e) { next(e); }
+});
+
+// DELETE notification
+router.delete('/notifications/:id', authenticate, isSuperAdmin, async (req, res, next) => {
+    try {
+        const notif = await Notification.findByPk(req.params.id);
+        if (!notif) return R.error(res, 'Notification tidak ditemukan', 404);
+        await notif.destroy();
+
+        appEmitter.emit('app_settings_changed', { id: req.params.id, deleted: true });
+        R.success(res, null, 'Notification deleted.');
+    } catch (e) { next(e); }
+});
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// PAGE BANNERS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// GET semua banners (superadmin panel)
+router.get('/banners', authenticate, isSuperAdmin, async (req, res, next) => {
+    try { R.success(res, await svc.getAllBanners()); } catch (e) { next(e); }
+});
+
+// GET banners untuk halaman saat ini (semua user; filter by role + path)
+router.get('/banners/page', authenticate, async (req, res, next) => {
+    try {
+        const path = req.query.path || '/';
+        R.success(res, await svc.getBannersForPath(path, req.user.role));
+    } catch (e) { next(e); }
+});
+
+// POST create banner
+router.post('/banners', authenticate, isSuperAdmin, async (req, res, next) => {
+    try {
+        const created = await svc.createBanner(req.body, req.user.id);
+        await notifyClients(`Banner halaman (${created.page_path}) diperbarui.`, 'all');
+        R.success(res, created, 'Banner dibuat');
+    } catch (e) { next(e); }
+});
+
+// PUT update banner
+router.put('/banners/:id', authenticate, isSuperAdmin, async (req, res, next) => {
+    try {
+        const updated = await svc.updateBanner(req.params.id, req.body, req.user.id);
+        await notifyClients(`Banner halaman (${updated.page_path}) diperbarui.`, 'all');
+        R.success(res, updated, 'Banner diperbarui');
+    } catch (e) { next(e); }
+});
+
+// PATCH toggle active banner
+router.patch('/banners/:id/toggle', authenticate, isSuperAdmin, async (req, res, next) => {
+    try {
+        const result = await svc.toggleBanner(req.params.id, req.user.id);
+        const action = result.is_active ? 'diaktifkan' : 'dinonaktifkan';
+        await notifyClients(`Banner halaman telah ${action}.`, 'all');
+        R.success(res, result, 'Banner ditoggle');
+    } catch (e) { next(e); }
+});
+
+// DELETE banner
+router.delete('/banners/:id', authenticate, isSuperAdmin, async (req, res, next) => {
+    try {
+        await svc.deleteBanner(req.params.id);
+        await notifyClients('Banner halaman dihapus.', 'all');
+        R.success(res, null, 'Banner dihapus');
+    } catch (e) { next(e); }
+});
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// NAV PAGES (dropdown helper)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+router.get('/pages', authenticate, isSuperAdmin, async (req, res, next) => {
+    try { R.success(res, await svc.getNavPages()); } catch (e) { next(e); }
 });
 
 module.exports = router;

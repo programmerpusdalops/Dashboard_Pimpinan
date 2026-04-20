@@ -6,14 +6,13 @@ import { Eye, EyeOff, Shield, RefreshCw, Users, ChevronDown, ChevronRight } from
 import { useNavAccess, useToggleNavAccess } from '../hooks/useAppSettings';
 
 const ROLE_META = {
-    superadmin: { label: 'Super Admin', color: 'var(--status-red)', bg: 'var(--status-red-bg)' },
     admin: { label: 'Admin', color: 'var(--status-yellow)', bg: 'var(--status-yellow-bg)' },
     operator: { label: 'Operator', color: 'var(--status-blue)', bg: 'var(--status-blue-bg)' },
     viewer: { label: 'Viewer', color: 'var(--status-green)', bg: 'var(--status-green-bg)' },
     pimpinan: { label: 'Pimpinan', color: '#a855f7', bg: 'rgba(168,85,247,0.12)' },
 };
 
-const ROLE_ORDER = ['pimpinan', 'superadmin', 'admin', 'operator', 'viewer'];
+const ROLE_ORDER = ['pimpinan', 'admin', 'operator', 'viewer'];
 
 export default function UsersAccessTab() {
     const { data: configs = [], isLoading, refetch } = useNavAccess();

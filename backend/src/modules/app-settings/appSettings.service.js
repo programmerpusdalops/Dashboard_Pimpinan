@@ -3,8 +3,11 @@ const {
     NavAccessConfig,
     ComponentVisibilityConfig,
     NotificationDotConfig,
+    PageBanner,
+    SystemStatusConfig,
     User,
 } = require('../../models');
+const { Op } = require('sequelize');
 
 // ── Default nav items & components (untuk seeding awal) ─────────
 const DEFAULT_NAV_ITEMS = [
@@ -68,6 +71,83 @@ const DEFAULT_NOTIF_DOTS = [
     { nav_key: 'instruksi', is_enabled: true },
 ];
 
+const DEFAULT_SYSTEM_STATUSES = [
+    {
+        value: 'normal',
+        label: 'Normal',
+        description: 'Gunakan saat situasi operasional terkendali, tidak ada eskalasi bencana, dan monitoring berjalan rutin.',
+        color: '#10b981',
+        sort_order: 1,
+        is_enabled: true,
+        is_current: true,
+    },
+    {
+        value: 'siaga',
+        label: 'Siaga',
+        description: 'Gunakan saat ada potensi gangguan atau peningkatan risiko yang membutuhkan kesiapan lintas unit dan pemantauan lebih intensif.',
+        color: '#f59e0b',
+        sort_order: 2,
+        is_enabled: true,
+        is_current: false,
+    },
+    {
+        value: 'darurat',
+        label: 'Darurat',
+        description: 'Gunakan saat bencana atau gangguan besar sedang terjadi dan membutuhkan komando cepat, prioritas tinggi, serta respon penuh.',
+        color: '#ef4444',
+        sort_order: 3,
+        is_enabled: true,
+        is_current: false,
+    },
+];
+
+let ensureSystemStatusesReadyPromise = null;
+
+const ensureSystemStatusesReady = async () => {
+    if (!ensureSystemStatusesReadyPromise) {
+        ensureSystemStatusesReadyPromise = (async () => {
+            await SystemStatusConfig.sync();
+
+            const count = await SystemStatusConfig.count();
+            if (count === 0) {
+                await SystemStatusConfig.bulkCreate(DEFAULT_SYSTEM_STATUSES);
+            }
+
+            const enabledStatuses = await SystemStatusConfig.findAll({
+                where: { is_enabled: true },
+                order: [['sort_order', 'ASC'], ['id', 'ASC']],
+            });
+
+            const currentCount = enabledStatuses.filter((item) => item.is_current).length;
+            if (enabledStatuses.length > 0 && currentCount !== 1) {
+                const fallbackId = enabledStatuses[0].id;
+                await SystemStatusConfig.update(
+                    { is_current: false },
+                    { where: {} },
+                );
+                await SystemStatusConfig.update(
+                    { is_current: true },
+                    { where: { id: fallbackId } },
+                );
+            }
+        })().catch((error) => {
+            ensureSystemStatusesReadyPromise = null;
+            throw error;
+        });
+    }
+
+    return ensureSystemStatusesReadyPromise;
+};
+
+const normalizeStatusValue = (input) => {
+    return String(input || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40);
+};
+
 // ═══════════════════════════════════════════════════════════════
 // NAV ACCESS
 // ═══════════════════════════════════════════════════════════════
@@ -121,9 +201,18 @@ const seedNotifDots = async () => {
  * Seed semua sekaligus
  */
 const seedAll = async () => {
+    // Create new feature table if missing (safe create; no alter)
+    try {
+        await PageBanner.sync();
+    } catch (e) {
+        // Don't block server startup if user hasn't migrated yet
+        console.warn('⚠️  PageBanner.sync failed:', e.message);
+    }
+
     await seedNavAccess();
     await seedComponents();
     await seedNotifDots();
+    await ensureSystemStatusesReady();
 };
 
 // ── GET all nav access (superadmin view) ────────────────────
@@ -223,6 +312,323 @@ const toggleNotifDot = async (id, userId) => {
     });
 };
 
+// SYSTEM STATUS
+
+const getPublicSystemStatuses = async () => {
+    await ensureSystemStatusesReady();
+
+    const statuses = await SystemStatusConfig.findAll({
+        where: { is_enabled: true },
+        order: [['sort_order', 'ASC'], ['id', 'ASC']],
+        attributes: ['id', 'value', 'label', 'description', 'color', 'sort_order', 'is_current'],
+    });
+
+    const currentStatus = statuses.find((item) => item.is_current) || statuses[0] || null;
+    return { statuses, currentStatus };
+};
+
+const getAllSystemStatuses = async () => {
+    await ensureSystemStatusesReady();
+
+    return SystemStatusConfig.findAll({
+        order: [['sort_order', 'ASC'], ['id', 'ASC']],
+        include: [
+            { model: User, as: 'creator', attributes: ['id', 'name'] },
+            { model: User, as: 'updater', attributes: ['id', 'name'] },
+        ],
+    });
+};
+
+const setCurrentSystemStatus = async (id, userId) => {
+    await ensureSystemStatusesReady();
+
+    const target = await SystemStatusConfig.findByPk(id);
+    if (!target) throw { statusCode: 404, message: 'Status tidak ditemukan' };
+    if (!target.is_enabled) throw { statusCode: 400, message: 'Status nonaktif tidak dapat diterapkan' };
+
+    await SystemStatusConfig.update(
+        { is_current: false, updated_by: userId },
+        { where: { is_current: true } },
+    );
+
+    await target.update({ is_current: true, updated_by: userId });
+
+    return target.reload({
+        include: [{ model: User, as: 'updater', attributes: ['id', 'name'] }],
+    });
+};
+
+const createSystemStatus = async (payload, userId) => {
+    await ensureSystemStatusesReady();
+
+    const value = normalizeStatusValue(payload.value || payload.label);
+    if (!value) throw { statusCode: 400, message: 'Value status wajib diisi' };
+    if (!payload.label?.trim()) throw { statusCode: 400, message: 'Label status wajib diisi' };
+    if (!payload.description?.trim()) throw { statusCode: 400, message: 'Keterangan status wajib diisi' };
+
+    const existing = await SystemStatusConfig.findOne({ where: { value } });
+    if (existing) throw { statusCode: 400, message: 'Value status sudah digunakan' };
+
+    const hasCurrent = await SystemStatusConfig.count({ where: { is_current: true, is_enabled: true } });
+
+    const created = await SystemStatusConfig.create({
+        value,
+        label: payload.label.trim(),
+        description: payload.description.trim(),
+        color: payload.color || '#f59e0b',
+        sort_order: Number(payload.sort_order) || 0,
+        is_enabled: payload.is_enabled !== undefined ? !!payload.is_enabled : true,
+        is_current: hasCurrent === 0 && (payload.is_enabled !== false),
+        created_by: userId,
+        updated_by: userId,
+    });
+
+    return created.reload({
+        include: [
+            { model: User, as: 'creator', attributes: ['id', 'name'] },
+            { model: User, as: 'updater', attributes: ['id', 'name'] },
+        ],
+    });
+};
+
+const updateSystemStatus = async (id, payload, userId) => {
+    await ensureSystemStatusesReady();
+
+    const status = await SystemStatusConfig.findByPk(id);
+    if (!status) throw { statusCode: 404, message: 'Status tidak ditemukan' };
+
+    if (payload.label !== undefined && !payload.label.trim()) {
+        throw { statusCode: 400, message: 'Label status wajib diisi' };
+    }
+    if (payload.description !== undefined && !payload.description.trim()) {
+        throw { statusCode: 400, message: 'Keterangan status wajib diisi' };
+    }
+
+    const nextValue = payload.value !== undefined || payload.label !== undefined
+        ? normalizeStatusValue(payload.value || payload.label || status.value)
+        : status.value;
+
+    if (!nextValue) throw { statusCode: 400, message: 'Value status wajib diisi' };
+
+    const existing = await SystemStatusConfig.findOne({
+        where: {
+            value: nextValue,
+            id: { [Op.ne]: id },
+        },
+    });
+    if (existing) throw { statusCode: 400, message: 'Value status sudah digunakan' };
+
+    const nextIsEnabled = payload.is_enabled !== undefined ? !!payload.is_enabled : status.is_enabled;
+
+    if (!nextIsEnabled && status.is_current) {
+        const fallback = await SystemStatusConfig.findOne({
+            where: {
+                id: { [Op.ne]: id },
+                is_enabled: true,
+            },
+            order: [['sort_order', 'ASC'], ['id', 'ASC']],
+        });
+
+        if (!fallback) {
+            throw { statusCode: 400, message: 'Minimal harus ada satu status aktif' };
+        }
+
+        await fallback.update({ is_current: true, updated_by: userId });
+    }
+
+    await status.update({
+        value: nextValue,
+        label: payload.label !== undefined ? payload.label.trim() : status.label,
+        description: payload.description !== undefined ? payload.description.trim() : status.description,
+        color: payload.color !== undefined ? payload.color : status.color,
+        sort_order: payload.sort_order !== undefined ? Number(payload.sort_order) || 0 : status.sort_order,
+        is_enabled: nextIsEnabled,
+        is_current: nextIsEnabled ? status.is_current : false,
+        updated_by: userId,
+    });
+
+    return status.reload({
+        include: [
+            { model: User, as: 'creator', attributes: ['id', 'name'] },
+            { model: User, as: 'updater', attributes: ['id', 'name'] },
+        ],
+    });
+};
+
+const deleteSystemStatus = async (id) => {
+    await ensureSystemStatusesReady();
+
+    const status = await SystemStatusConfig.findByPk(id);
+    if (!status) throw { statusCode: 404, message: 'Status tidak ditemukan' };
+
+    const total = await SystemStatusConfig.count();
+    if (total <= 1) {
+        throw { statusCode: 400, message: 'Minimal harus ada satu status' };
+    }
+
+    const wasCurrent = status.is_current;
+    await status.destroy();
+
+    if (wasCurrent) {
+        const fallback = await SystemStatusConfig.findOne({
+            where: { is_enabled: true },
+            order: [['sort_order', 'ASC'], ['id', 'ASC']],
+        });
+
+        if (fallback) {
+            await SystemStatusConfig.update({ is_current: false }, { where: {} });
+            await fallback.update({ is_current: true });
+        }
+    }
+
+    return { id };
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE BANNERS
+// ═════════════════════════════════════════════════════════════════════════════
+
+const getAllBanners = async () => {
+    try {
+        return PageBanner.findAll({
+            order: [['page_path', 'ASC'], ['sort_order', 'ASC'], ['id', 'ASC']],
+            include: [
+                { model: User, as: 'creator', attributes: ['id', 'name'] },
+                { model: User, as: 'updater', attributes: ['id', 'name'] },
+            ],
+        });
+    } catch (e) {
+        // If table doesn't exist yet, fail gracefully (frontend will show empty)
+        console.warn('⚠️  getAllBanners failed:', e.message);
+        return [];
+    }
+};
+
+const getBannersForPath = async (pagePath, role) => {
+    const { Op } = require('sequelize');
+    const safePath = pagePath && typeof pagePath === 'string' ? pagePath : '/';
+
+    try {
+        return PageBanner.findAll({
+            where: {
+                is_active: true,
+                page_path: { [Op.in]: ['*', safePath] },
+                target_role: { [Op.in]: ['all', role] },
+            },
+            order: [['sort_order', 'ASC'], ['id', 'ASC']],
+            attributes: [
+                'id', 'page_path', 'banner_type', 'title', 'message',
+                'target_role', 'is_active', 'is_dismissible', 'sort_order', 'updatedAt',
+            ],
+        });
+    } catch (e) {
+        console.warn('⚠️  getBannersForPath failed:', e.message);
+        return [];
+    }
+};
+
+const createBanner = async (payload, userId) => {
+    const data = {
+        page_path: payload.page_path,
+        banner_type: payload.banner_type,
+        title: payload.title,
+        message: payload.message,
+        target_role: payload.target_role || 'all',
+        is_active: payload.is_active !== undefined ? payload.is_active : true,
+        is_dismissible: payload.is_dismissible !== undefined ? payload.is_dismissible : true,
+        sort_order: payload.sort_order || 0,
+        created_by: userId,
+        updated_by: userId,
+    };
+    return PageBanner.create(data);
+};
+
+const updateBanner = async (id, payload, userId) => {
+    const banner = await PageBanner.findByPk(id);
+    if (!banner) throw { statusCode: 404, message: 'Banner tidak ditemukan' };
+
+    await banner.update({
+        page_path: payload.page_path !== undefined ? payload.page_path : banner.page_path,
+        banner_type: payload.banner_type !== undefined ? payload.banner_type : banner.banner_type,
+        title: payload.title !== undefined ? payload.title : banner.title,
+        message: payload.message !== undefined ? payload.message : banner.message,
+        target_role: payload.target_role !== undefined ? payload.target_role : banner.target_role,
+        is_active: payload.is_active !== undefined ? payload.is_active : banner.is_active,
+        is_dismissible: payload.is_dismissible !== undefined ? payload.is_dismissible : banner.is_dismissible,
+        sort_order: payload.sort_order !== undefined ? payload.sort_order : banner.sort_order,
+        updated_by: userId,
+    });
+
+    return banner.reload({
+        include: [
+            { model: User, as: 'creator', attributes: ['id', 'name'] },
+            { model: User, as: 'updater', attributes: ['id', 'name'] },
+        ],
+    });
+};
+
+const toggleBanner = async (id, userId) => {
+    const banner = await PageBanner.findByPk(id);
+    if (!banner) throw { statusCode: 404, message: 'Banner tidak ditemukan' };
+    await banner.update({ is_active: !banner.is_active, updated_by: userId });
+    return banner.reload({
+        include: [{ model: User, as: 'updater', attributes: ['id', 'name'] }],
+    });
+};
+
+const deleteBanner = async (id) => {
+    const banner = await PageBanner.findByPk(id);
+    if (!banner) throw { statusCode: 404, message: 'Banner tidak ditemukan' };
+    await banner.destroy();
+    return { id };
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// NAV PAGES (dropdown helper)
+// ═════════════════════════════════════════════════════════════════════════════
+
+const NAV_KEY_TO_PATH = {
+    dashboard: '/',
+    map: '/map',
+    ops: '/ops',
+    logistics: '/logistics',
+    refugees: '/refugees',
+    funding: '/funding',
+    admin: '/admin',
+    instruksi: '/instruksi',
+    'app-settings': '/app-settings',
+};
+
+const getNavPages = async () => {
+    try {
+        // Ambil set nav items terlengkap dari role superadmin (seed default juga dari sini).
+        // Ini memastikan label berasal dari DB (bisa di-rename lewat nav_access_configs).
+        const rows = await NavAccessConfig.findAll({
+            where: { role: 'superadmin' },
+            attributes: ['nav_key', 'nav_label', 'sort_order'],
+            order: [['sort_order', 'ASC']],
+        });
+
+        return rows
+            .map(r => ({
+                nav_key: r.nav_key,
+                nav_label: r.nav_label,
+                sort_order: r.sort_order,
+                path: NAV_KEY_TO_PATH[r.nav_key],
+            }))
+            .filter(r => !!r.path);
+    } catch (e) {
+        console.warn('⚠️  getNavPages failed:', e.message);
+        // Fallback static mapping (label may not match DB rename)
+        return Object.entries(NAV_KEY_TO_PATH).map(([nav_key, path], idx) => ({
+            nav_key,
+            nav_label: nav_key,
+            sort_order: idx + 1,
+            path,
+        }));
+    }
+};
+
 module.exports = {
     seedAll,
     // Nav access
@@ -239,4 +645,20 @@ module.exports = {
     getAllNotifDots,
     getNotifDotsPublic,
     toggleNotifDot,
+    // System statuses
+    getPublicSystemStatuses,
+    getAllSystemStatuses,
+    setCurrentSystemStatus,
+    createSystemStatus,
+    updateSystemStatus,
+    deleteSystemStatus,
+    // Page banners
+    getAllBanners,
+    getBannersForPath,
+    createBanner,
+    updateBanner,
+    toggleBanner,
+    deleteBanner,
+    // Nav pages
+    getNavPages,
 };

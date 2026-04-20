@@ -4,10 +4,12 @@ import './Sidebar.css';
 
 import {
     LayoutDashboard, Map, RadioTower, Truck, Users, Landmark,
-    Settings, Cog, Bell, CheckCircle, Clock, LogOut, ChevronLeft, ChevronRight
+    Settings, Cog, Bell, CheckCircle, Clock, LogOut, ScrollText
 } from 'lucide-react';
 import BpbdLogo from './BpbdLogo';
+import ConfirmDialog from './ConfirmDialog';
 import useAuthStore from '../../store/authStore';
+import useLayoutStore from '../../store/useLayoutStore';
 import { useInstructionCount } from '../../hooks/useInstructions';
 import { useNavAccessByRole, useNotifDotsPublic } from '../../features/app-settings/hooks/useAppSettings';
 import { useRealtimeAppEvents, useNotifications } from '../../hooks/useRealtime';
@@ -31,7 +33,7 @@ const NAV_KEY_MAP = {
     refugees:       { path: '/refugees',    icon: Users,           label: 'Data Pengungsi' },
     funding:        { path: '/funding',     icon: Landmark,        label: 'Anggaran & Pendanaan' },
     admin:          { path: '/admin',       icon: Settings,        label: 'Admin' },
-    instruksi:      { path: '/instruksi',   icon: RadioTower,      label: 'Instruksi Pimpinan' },
+    instruksi:      { path: '/instruksi',   icon: ScrollText,      label: 'Instruksi Pimpinan' },
     'app-settings': { path: '/app-settings', icon: Cog,            label: 'App Settings' },
 };
 
@@ -45,13 +47,7 @@ export default function Sidebar() {
     // ── Realtime Setup ──
     useRealtimeAppEvents();
 
-    const [collapsed, setCollapsed] = useState(() => {
-        try {
-            return localStorage.getItem('sidebar_collapsed') === '1';
-        } catch {
-            return false;
-        }
-    });
+    const { sidebarCollapsed: collapsed } = useLayoutStore();
 
     const navigate = useNavigate();
     const { user, logout } = useAuthStore();
@@ -68,6 +64,10 @@ export default function Sidebar() {
     const { data: notifications = [] } = useNotifications();
     const [showNotif, setShowNotif] = useState(false);
     const notifRef = useRef(null);
+    const navRef = useRef(null);
+
+    const [tooltip, setTooltip] = useState(null);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     // Cache unread status
     const [lastReadNotifId, setLastReadNotifId] = useState(() => {
@@ -76,21 +76,13 @@ export default function Sidebar() {
 
     const hasUnreadNotif = notifications.length > 0 && notifications[0].id > lastReadNotifId;
 
-    useEffect(() => {
-        const root = document.documentElement;
-        if (collapsed) root.setAttribute('data-sidebar', 'collapsed');
-        else root.removeAttribute('data-sidebar');
-
-        try {
-            localStorage.setItem('sidebar_collapsed', collapsed ? '1' : '0');
-        } catch {
-            // ignore
-        }
-    }, [collapsed]);
-
     const handleLogout = async () => {
         await logout();
         navigate('/login');
+    };
+
+    const requestLogout = () => {
+        setShowLogoutConfirm(true);
     };
 
     const toggleNotif = () => {
@@ -113,6 +105,40 @@ export default function Sidebar() {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        const onAnyScroll = () => setTooltip(null);
+        const navEl = navRef.current;
+        if (navEl) navEl.addEventListener('scroll', onAnyScroll);
+        window.addEventListener('resize', onAnyScroll);
+        return () => {
+            if (navEl) navEl.removeEventListener('scroll', onAnyScroll);
+            window.removeEventListener('resize', onAnyScroll);
+        };
+    }, []);
+
+    const showTooltip = (targetEl, text) => {
+        if (!collapsed) return;
+        if (!targetEl || !text) return;
+        const rect = targetEl.getBoundingClientRect();
+        setTooltip({
+            text,
+            top: rect.top + rect.height / 2,
+            left: rect.right + 12,
+        });
+    };
+
+    const showTooltipAny = (targetEl, text) => {
+        if (!targetEl || !text) return;
+        const rect = targetEl.getBoundingClientRect();
+        setTooltip({
+            text,
+            top: rect.top + rect.height / 2,
+            left: rect.right + 12,
+        });
+    };
+
+    const hideTooltip = () => setTooltip(null);
 
     // Build notification dot lookup (nav_key → boolean)
     const dotEnabled = {};
@@ -155,12 +181,12 @@ export default function Sidebar() {
         // Fallback: admin/superadmin gets admin nav
         if (role === 'admin' || role === 'superadmin') {
             adminItems.push({
-                path: '/admin', icon: Settings, label: 'Pengaturan Master', navKey: 'admin',
+                path: '/admin', icon: Settings, label: 'Admin', navKey: 'admin',
             });
         }
         if (role === 'superadmin') {
             adminItems.push({
-                path: '/app-settings', icon: Cog, label: 'App Settings', navKey: 'app-settings',
+                path: '/app-settings', icon: Cog, label: 'Pengaturan Aplikasi', navKey: 'app-settings',
             });
         }
     }
@@ -179,6 +205,11 @@ export default function Sidebar() {
                 className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                 style={{ position: 'relative' }}
                 data-tooltip={collapsed ? item.label : undefined}
+                onMouseEnter={(e) => showTooltip(e.currentTarget, item.label)}
+                onMouseLeave={hideTooltip}
+                onFocus={(e) => showTooltip(e.currentTarget, item.label)}
+                onBlur={hideTooltip}
+                onClick={hideTooltip}
             >
                 <item.icon size={18} />
                 <span className="nav-label">{item.label}</span>
@@ -199,16 +230,6 @@ export default function Sidebar() {
     return (
         <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
             <div className="sidebar-logo">
-                <button
-                    type="button"
-                    className="sidebar-collapse-toggle"
-                    onClick={() => setCollapsed(v => !v)}
-                    title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-                    aria-label={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-                >
-                    {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                </button>
-
                 <BpbdLogo size={collapsed ? 38 : 42} />
 
                 <div className="sidebar-logo-text">
@@ -217,7 +238,7 @@ export default function Sidebar() {
                 </div>
             </div>
 
-            <nav>
+            <nav ref={navRef}>
                 {mainItems.map(renderNavItem)}
 
                 {adminItems.length > 0 && (
@@ -228,15 +249,23 @@ export default function Sidebar() {
                 )}
             </nav>
 
+            {tooltip && collapsed && (
+                <div className="sidebar-tooltip" style={{ top: tooltip.top, left: tooltip.left }}>
+                    {tooltip.text}
+                </div>
+            )}
+
             <div style={{ position: 'relative' }} ref={notifRef}>
                 <div 
-                    onClick={toggleNotif}
+                    onClick={() => { hideTooltip(); toggleNotif(); }}
                     className="nav-link sidebar-system-link" 
                     style={{ cursor: 'pointer', background: showNotif ? 'rgba(59, 130, 246, 0.1)' : undefined }}
-                    data-tooltip={collapsed ? 'System Messages' : undefined}
+                    data-tooltip={collapsed ? 'Notifikasi' : undefined}
+                    onMouseEnter={(e) => showTooltip(e.currentTarget, 'Notifikasi')}
+                    onMouseLeave={hideTooltip}
                 >
                     <Bell size={18} />
-                    <span className="nav-label">System Messages</span>
+                    <span className="nav-label">Notifikasi</span>
                     {hasUnreadNotif && (
                         <span className="sidebar-unread-dot" />
                     )}
@@ -302,15 +331,33 @@ export default function Sidebar() {
                         <div className="sidebar-account-role">{(user?.role || 'viewer').toUpperCase()}</div>
                     </div>
                     <button
-                        onClick={handleLogout}
-                        className="btn btn-outline"
+                        onClick={() => { hideTooltip(); requestLogout(); }}
+                        className="btn btn-outline sidebar-logout-btn"
                         style={{ padding: '6px 10px' }}
-                        title="Logout"
+                        data-tooltip="Logout"
+                        onMouseEnter={(e) => showTooltipAny(e.currentTarget, 'Logout')}
+                        onMouseLeave={hideTooltip}
+                        onFocus={(e) => showTooltipAny(e.currentTarget, 'Logout')}
+                        onBlur={hideTooltip}
                     >
                         <LogOut size={15} style={{ transform: 'scaleX(-1)' }} />
                     </button>
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={showLogoutConfirm}
+                title="Konfirmasi Logout"
+                message="Anda yakin ingin keluar dari aplikasi?"
+                confirmText="Ya, Logout"
+                cancelText="Batal"
+                confirmVariant="danger"
+                onCancel={() => setShowLogoutConfirm(false)}
+                onConfirm={async () => {
+                    setShowLogoutConfirm(false);
+                    await handleLogout();
+                }}
+            />
         </aside>
     );
 }

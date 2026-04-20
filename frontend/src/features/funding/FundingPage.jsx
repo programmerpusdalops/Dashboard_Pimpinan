@@ -204,7 +204,7 @@ export default function FundingPage() {
                         </div>
                         <div className="chart-container" style={{ height: 280 }}>
                             {brLoading ? <div className="skeleton" style={{ height: '100%' }} /> : (
-                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                                <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                                     <LineChart data={burnChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                         <XAxis dataKey="tanggal" tick={{ fill: '#94a3b8', fontSize: 10 }} />
@@ -342,7 +342,7 @@ export default function FundingPage() {
                             </p>
                         ) : (
                             <div className="chart-container" style={{ height: 280, marginTop: 8 }}>
-                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                                <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                                     <BarChart data={burnChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                         <XAxis dataKey="tanggal" tick={{ fill: '#94a3b8', fontSize: 10 }} />

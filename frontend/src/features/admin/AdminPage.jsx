@@ -20,9 +20,8 @@ import FundingTab from './tabs/FundingTab';
 import DecisionsTab from './tabs/DecisionsTab';
 
 // ── Constants ────────────────────────────────────────────────────
-const ROLES = ['viewer', 'operator', 'admin', 'superadmin'];
+const ROLES = ['viewer', 'operator', 'admin'];
 const ROLE_STYLE = {
-    superadmin: { bg: 'var(--status-red-bg)', color: 'var(--status-red)', label: 'Superadmin' },
     admin: { bg: 'var(--status-yellow-bg)', color: 'var(--status-yellow)', label: 'Admin' },
     operator: { bg: 'var(--status-blue-bg)', color: 'var(--status-blue)', label: 'Operator' },
     viewer: { bg: 'var(--status-green-bg)', color: 'var(--status-green)', label: 'Viewer' },
@@ -140,7 +139,7 @@ function UsersTab() {
         role: filterRole || undefined,
     });
 
-    const users = data?.data ?? [];
+    const users = (data?.data ?? []).filter(u => u.role !== 'superadmin');
     const pagination = data?.pagination;
 
     const toggleActive = useToggleUserActive();
@@ -574,18 +573,7 @@ export default function AdminPage() {
 
     return (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
-            {/* Header info */}
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
-                padding: '10px 14px', background: 'var(--status-blue-bg)',
-                borderRadius: 'var(--radius-md)', border: '1px solid rgba(59,130,246,0.2)'
-            }}>
-                <ShieldCheck size={16} style={{ color: 'var(--status-blue)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                    Panel Admin — Kelola seluruh data Command Center dari sini.
-                    Perubahan bersifat permanen.
-                </span>
-            </div>
+            
 
             {/* Tabs */}
             <div style={{

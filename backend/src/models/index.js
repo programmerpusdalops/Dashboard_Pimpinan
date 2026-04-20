@@ -17,7 +17,9 @@ const Instruction = require('./Instruction');
 const NavAccessConfig = require('./NavAccessConfig');
 const ComponentVisibilityConfig = require('./ComponentVisibilityConfig');
 const NotificationDotConfig = require('./NotificationDotConfig');
+const PageBanner = require('./PageBanner');
 const Notification = require('./Notification');
+const SystemStatusConfig = require('./SystemStatusConfig');
 
 // ── DisasterEvent associations ──────────────────────────────
 DisasterEvent.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
@@ -73,6 +75,10 @@ Instruction.belongsTo(User, { foreignKey: 'responded_by', as: 'responder' });
 NavAccessConfig.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 ComponentVisibilityConfig.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 NotificationDotConfig.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+PageBanner.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+PageBanner.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+SystemStatusConfig.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+SystemStatusConfig.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 
 module.exports = {
     sequelize,
@@ -85,5 +91,7 @@ module.exports = {
     NavAccessConfig,
     ComponentVisibilityConfig,
     NotificationDotConfig,
+    PageBanner,
     Notification,
+    SystemStatusConfig,
 };
